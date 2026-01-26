@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Eye, EyeOff, CheckCircle2, AlertCircle, Server } from 'lucide-react';
+import { Save, Eye, EyeOff, CheckCircle2, AlertCircle, Server, Shield, Key, Users } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ interface ToolConfigCardProps {
   title: string;
   description: string;
   color: string;
+  icon: React.ReactNode;
   config: { baseUrl: string; apiKey?: string; apiToken?: string };
   onBaseUrlChange: (value: string) => void;
   onKeyChange: (value: string) => void;
@@ -26,6 +27,7 @@ function ToolConfigCard({
   title,
   description,
   color,
+  icon,
   config,
   onBaseUrlChange,
   onKeyChange,
@@ -53,7 +55,7 @@ function ToolConfigCard({
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={cn('flex h-10 w-10 items-center justify-center rounded-lg', color)}>
-            <Server className="h-5 w-5 text-white" />
+            {icon}
           </div>
           <div>
             <h3 className="font-semibold text-card-foreground">{title}</h3>
@@ -118,6 +120,8 @@ export default function ApiConfigPage() {
     vicarius: { baseUrl: '', apiKey: '' },
     cortex: { baseUrl: '', apiToken: '' },
     warp: { baseUrl: '', apiToken: '' },
+    pam: { baseUrl: '', apiToken: '' },
+    jumpcloud: { baseUrl: '', apiToken: '' },
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -131,8 +135,13 @@ export default function ApiConfigPage() {
   const handleSave = async () => {
     setIsSaving(true);
 
-    // Validate URLs
-    const urls = [config.vicarius.baseUrl, config.cortex.baseUrl, config.warp.baseUrl];
+    const urls = [
+      config.vicarius.baseUrl,
+      config.cortex.baseUrl,
+      config.warp.baseUrl,
+      config.pam.baseUrl,
+      config.jumpcloud.baseUrl,
+    ];
     for (const url of urls) {
       if (url) {
         const validation = validateUrl(url);
@@ -148,7 +157,6 @@ export default function ApiConfigPage() {
       }
     }
 
-    // Simulate save delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     saveApiConfig(config);
@@ -163,6 +171,8 @@ export default function ApiConfigPage() {
   const isVicariusConfigured = !!(config.vicarius.baseUrl && config.vicarius.apiKey);
   const isCortexConfigured = !!(config.cortex.baseUrl && config.cortex.apiToken);
   const isWarpConfigured = !!(config.warp.baseUrl && config.warp.apiToken);
+  const isPamConfigured = !!(config.pam.baseUrl && config.pam.apiToken);
+  const isJumpcloudConfigured = !!(config.jumpcloud.baseUrl && config.jumpcloud.apiToken);
 
   return (
     <MainLayout>
@@ -172,7 +182,7 @@ export default function ApiConfigPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Configurar APIs</h1>
             <p className="text-muted-foreground">
-              Configure as credenciais para conectar às ferramentas de segurança
+              Configure as credenciais para conectar às 5 ferramentas de segurança
             </p>
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
@@ -189,12 +199,13 @@ export default function ApiConfigPage() {
           </p>
         </div>
 
-        {/* Config Cards */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* Config Cards - Row 1 */}
+        <div className="mb-6 grid gap-6 lg:grid-cols-3">
           <ToolConfigCard
             title="Vicarius"
-            description="Plataforma de gerenciamento de vulnerabilidades"
+            description="Gerenciamento de vulnerabilidades"
             color="bg-primary"
+            icon={<Server className="h-5 w-5 text-primary-foreground" />}
             config={config.vicarius}
             onBaseUrlChange={(value) =>
               setConfig((prev) => ({
@@ -217,6 +228,7 @@ export default function ApiConfigPage() {
             title="Cortex"
             description="Plataforma de segurança XDR"
             color="bg-warning"
+            icon={<Shield className="h-5 w-5 text-warning-foreground" />}
             config={config.cortex}
             onBaseUrlChange={(value) =>
               setConfig((prev) => ({
@@ -239,6 +251,7 @@ export default function ApiConfigPage() {
             title="Warp"
             description="Cloudflare Zero Trust"
             color="bg-purple-500"
+            icon={<Server className="h-5 w-5 text-white" />}
             config={config.warp}
             onBaseUrlChange={(value) =>
               setConfig((prev) => ({
@@ -255,6 +268,55 @@ export default function ApiConfigPage() {
             keyLabel="API Token"
             keyPlaceholder="warp_xxxxx..."
             isConfigured={isWarpConfigured}
+          />
+        </div>
+
+        {/* Config Cards - Row 2 */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <ToolConfigCard
+            title="PAM (Senha Segura)"
+            description="Gerenciamento de acesso privilegiado"
+            color="bg-destructive"
+            icon={<Key className="h-5 w-5 text-destructive-foreground" />}
+            config={config.pam}
+            onBaseUrlChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                pam: { ...prev.pam, baseUrl: value },
+              }))
+            }
+            onKeyChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                pam: { ...prev.pam, apiToken: value },
+              }))
+            }
+            keyLabel="API Token / Key"
+            keyPlaceholder="pam_xxxxx..."
+            isConfigured={isPamConfigured}
+          />
+
+          <ToolConfigCard
+            title="JumpCloud"
+            description="Diretório / Device Management"
+            color="bg-blue-500"
+            icon={<Users className="h-5 w-5 text-white" />}
+            config={config.jumpcloud}
+            onBaseUrlChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                jumpcloud: { ...prev.jumpcloud, baseUrl: value },
+              }))
+            }
+            onKeyChange={(value) =>
+              setConfig((prev) => ({
+                ...prev,
+                jumpcloud: { ...prev.jumpcloud, apiToken: value },
+              }))
+            }
+            keyLabel="API Token"
+            keyPlaceholder="jc_xxxxx..."
+            isConfigured={isJumpcloudConfigured}
           />
         </div>
       </div>

@@ -5,7 +5,9 @@ export interface Endpoint {
   uuid: string;
   os?: string;
   lastSeen?: string;
-  source: 'vicarius' | 'cortex' | 'warp';
+  source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud';
+  userId?: string;
+  userEmail?: string;
 }
 
 export interface NormalizedEndpoint {
@@ -14,7 +16,11 @@ export interface NormalizedEndpoint {
   uuid: string;
   os?: string;
   lastSeen?: string;
-  sources: ('vicarius' | 'cortex' | 'warp')[];
+  sources: ('vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud')[];
+  userId?: string;
+  userEmail?: string;
+  riskLevel?: 'none' | 'low' | 'medium' | 'high';
+  riskReason?: string;
 }
 
 export interface ComparisonResult {
@@ -22,10 +28,17 @@ export interface ComparisonResult {
   onlyVicarius: NormalizedEndpoint[];
   onlyCortex: NormalizedEndpoint[];
   onlyWarp: NormalizedEndpoint[];
+  onlyPam: NormalizedEndpoint[];
+  onlyJumpcloud: NormalizedEndpoint[];
   inAllSources: NormalizedEndpoint[];
   missingFromVicarius: NormalizedEndpoint[];
   missingFromCortex: NormalizedEndpoint[];
   missingFromWarp: NormalizedEndpoint[];
+  missingFromPam: NormalizedEndpoint[];
+  missingFromJumpcloud: NormalizedEndpoint[];
+  terminatedWithActiveEndpoints: NormalizedEndpoint[];
+  terminatedInJumpcloud: TerminatedEmployee[];
+  terminatedInPam: TerminatedEmployee[];
 }
 
 export interface ApiConfig {
@@ -41,6 +54,14 @@ export interface ApiConfig {
     baseUrl: string;
     apiToken: string;
   };
+  pam: {
+    baseUrl: string;
+    apiToken: string;
+  };
+  jumpcloud: {
+    baseUrl: string;
+    apiToken: string;
+  };
 }
 
 export interface SyncLog {
@@ -53,6 +74,8 @@ export interface SyncLog {
     vicarius: number;
     cortex: number;
     warp: number;
+    pam: number;
+    jumpcloud: number;
   };
 }
 
@@ -70,4 +93,13 @@ export interface SyncStatus {
   lastSync: string | null;
   status: 'idle' | 'syncing' | 'success' | 'error';
   message?: string;
+}
+
+export interface TerminatedEmployee {
+  id: string;
+  name: string;
+  email: string;
+  terminationDate: string;
+  notes?: string;
+  createdAt: string;
 }

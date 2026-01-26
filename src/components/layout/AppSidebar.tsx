@@ -1,10 +1,11 @@
-import { LayoutDashboard, Settings, FileText, AlertTriangle, Server } from 'lucide-react';
+import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Configurar APIs', href: '/api-config', icon: Settings },
+  { name: 'Desligados', href: '/terminated', icon: UserX },
   { name: 'Logs / Erros', href: '/logs', icon: FileText },
   { name: 'Alertas', href: '/alerts', icon: AlertTriangle },
 ];
@@ -52,10 +53,10 @@ export function AppSidebar() {
         <div className="border-t border-sidebar-border p-4">
           <div className="rounded-lg bg-sidebar-accent/50 p-3">
             <p className="text-xs text-muted-foreground">
-              Dados mockados ativos
+              5 fontes configuradas
             </p>
             <p className="mt-1 text-xs text-primary">
-              Configure APIs para dados reais
+              Vicarius • Cortex • Warp • PAM • JumpCloud
             </p>
           </div>
         </div>

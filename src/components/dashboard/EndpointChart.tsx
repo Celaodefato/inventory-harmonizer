@@ -4,19 +4,25 @@ interface EndpointChartProps {
   vicariusCount: number;
   cortexCount: number;
   warpCount: number;
+  pamCount: number;
+  jumpcloudCount: number;
 }
 
 const COLORS = {
   vicarius: 'hsl(173, 80%, 45%)',
   cortex: 'hsl(38, 92%, 55%)',
   warp: 'hsl(262, 83%, 58%)',
+  pam: 'hsl(0, 72%, 51%)',
+  jumpcloud: 'hsl(210, 80%, 55%)',
 };
 
-export function EndpointChart({ vicariusCount, cortexCount, warpCount }: EndpointChartProps) {
+export function EndpointChart({ vicariusCount, cortexCount, warpCount, pamCount, jumpcloudCount }: EndpointChartProps) {
   const data = [
     { name: 'Vicarius', count: vicariusCount, color: COLORS.vicarius },
     { name: 'Cortex', count: cortexCount, color: COLORS.cortex },
     { name: 'Warp', count: warpCount, color: COLORS.warp },
+    { name: 'PAM', count: pamCount, color: COLORS.pam },
+    { name: 'JumpCloud', count: jumpcloudCount, color: COLORS.jumpcloud },
   ];
 
   return (
@@ -32,7 +38,11 @@ export function EndpointChart({ vicariusCount, cortexCount, warpCount }: Endpoin
               dataKey="name" 
               axisLine={false}
               tickLine={false}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+              interval={0}
+              angle={-15}
+              textAnchor="end"
+              height={40}
             />
             <YAxis 
               axisLine={false}
