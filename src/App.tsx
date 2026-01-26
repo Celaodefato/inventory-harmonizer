@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import ApiConfig from "./pages/ApiConfig";
+import Terminated from "./pages/Terminated";
 import Logs from "./pages/Logs";
 import Alerts from "./pages/Alerts";
 import NotFound from "./pages/NotFound";
@@ -20,6 +21,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/api-config" element={<ApiConfig />} />
+          <Route path="/terminated" element={<Terminated />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="*" element={<NotFound />} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { forwardRef, useState, useEffect } from 'react';
 import { AlertTriangle, Info, AlertCircle, Trash2, Bell } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -39,10 +39,10 @@ const alertStyles = {
 const typeLabels = {
   info: 'Informação',
   warning: 'Atenção',
-  error: 'Erro',
+  error: 'Crítico',
 };
 
-export default function AlertsPage() {
+const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const { toast } = useToast();
 
@@ -75,7 +75,7 @@ export default function AlertsPage() {
   };
 
   return (
-    <MainLayout>
+    <MainLayout ref={ref}>
       <div className="p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -126,7 +126,7 @@ export default function AlertsPage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{alertCounts.error}</p>
-                <p className="text-sm text-muted-foreground">Erros</p>
+                <p className="text-sm text-muted-foreground">Críticos</p>
               </div>
             </div>
           </div>
@@ -196,4 +196,8 @@ export default function AlertsPage() {
       </div>
     </MainLayout>
   );
-}
+});
+
+AlertsPage.displayName = 'AlertsPage';
+
+export default AlertsPage;

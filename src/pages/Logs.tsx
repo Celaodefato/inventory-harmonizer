@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, Clock, Trash2 } from 'lucide-react';
+import { forwardRef, useState, useEffect } from 'react';
+import { CheckCircle2, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Button } from '@/components/ui/button';
 import { getSyncLogs } from '@/lib/storage';
 import { SyncLog } from '@/types/inventory';
 import { format } from 'date-fns';
@@ -26,7 +25,7 @@ const statusLabels = {
   partial: 'Parcial',
 };
 
-export default function LogsPage() {
+const LogsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [logs, setLogs] = useState<SyncLog[]>([]);
 
   useEffect(() => {
@@ -43,7 +42,7 @@ export default function LogsPage() {
   };
 
   return (
-    <MainLayout>
+    <MainLayout ref={ref}>
       <div className="p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8">
@@ -106,7 +105,7 @@ export default function LogsPage() {
                       )}
 
                       {log.endpointCounts && (
-                        <div className="mt-2 flex flex-wrap gap-3">
+                        <div className="mt-2 flex flex-wrap gap-2">
                           <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                             Vicarius: {log.endpointCounts.vicarius}
                           </span>
@@ -115,6 +114,12 @@ export default function LogsPage() {
                           </span>
                           <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-400">
                             Warp: {log.endpointCounts.warp}
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
+                            PAM: {log.endpointCounts.pam}
+                          </span>
+                          <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
+                            JumpCloud: {log.endpointCounts.jumpcloud}
                           </span>
                         </div>
                       )}
@@ -128,4 +133,8 @@ export default function LogsPage() {
       </div>
     </MainLayout>
   );
-}
+});
+
+LogsPage.displayName = 'LogsPage';
+
+export default LogsPage;

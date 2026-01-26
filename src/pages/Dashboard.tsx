@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Server, AlertTriangle, CheckCircle2, Clock, Database } from 'lucide-react';
+import { Server, AlertTriangle, CheckCircle2, Clock, UserX, Shield } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SyncButton } from '@/components/dashboard/SyncButton';
@@ -10,10 +10,12 @@ import {
   fetchVicariusEndpoints,
   fetchCortexEndpoints,
   fetchWarpEndpoints,
+  fetchPamEndpoints,
+  fetchJumpcloudEndpoints,
   compareInventories,
   generateAlerts,
 } from '@/lib/inventory';
-import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync } from '@/lib/storage';
+import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync, getTerminatedEmployees } from '@/lib/storage';
 import { ComparisonResult, SyncStatus, Alert, SyncLog } from '@/types/inventory';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -31,11 +33,12 @@ export default function Dashboard() {
     vicarius: 0,
     cortex: 0,
     warp: 0,
+    pam: 0,
+    jumpcloud: 0,
   });
 
   const { toast } = useToast();
 
-  // Load saved alerts on mount
   useEffect(() => {
     const savedAlerts = getAlerts();
     setAlerts(savedAlerts);
@@ -45,30 +48,38 @@ export default function Dashboard() {
     setSyncStatus({ isLoading: true, lastSync: syncStatus.lastSync, status: 'syncing' });
 
     try {
-      // Fetch from all sources in parallel
-      const [vicariusData, cortexData, warpData] = await Promise.all([
+      const terminatedEmployees = getTerminatedEmployees();
+
+      const [vicariusData, cortexData, warpData, pamData, jumpcloudData] = await Promise.all([
         fetchVicariusEndpoints(),
         fetchCortexEndpoints(),
         fetchWarpEndpoints(),
+        fetchPamEndpoints(),
+        fetchJumpcloudEndpoints(),
       ]);
 
-      // Update counts
       setEndpointCounts({
         vicarius: vicariusData.length,
         cortex: cortexData.length,
         warp: warpData.length,
+        pam: pamData.length,
+        jumpcloud: jumpcloudData.length,
       });
 
-      // Compare inventories
-      const result = compareInventories(vicariusData, cortexData, warpData);
+      const result = compareInventories(
+        vicariusData,
+        cortexData,
+        warpData,
+        pamData,
+        jumpcloudData,
+        terminatedEmployees
+      );
       setComparison(result);
 
-      // Generate and save alerts
       const newAlerts = generateAlerts(result);
       setAlerts(newAlerts);
       saveAlerts(newAlerts);
 
-      // Log sync
       const timestamp = new Date().toISOString();
       const log: SyncLog = {
         id: `log-${Date.now()}`,
@@ -79,6 +90,8 @@ export default function Dashboard() {
           vicarius: vicariusData.length,
           cortex: cortexData.length,
           warp: warpData.length,
+          pam: pamData.length,
+          jumpcloud: jumpcloudData.length,
         },
       };
       addSyncLog(log);
@@ -92,10 +105,9 @@ export default function Dashboard() {
 
       toast({
         title: 'Sincronização concluída',
-        description: `${result.allEndpoints.length} endpoints processados`,
+        description: `${result.allEndpoints.length} endpoints processados de 5 fontes`,
       });
 
-      // Reset status after 3 seconds
       setTimeout(() => {
         setSyncStatus((prev) => ({ ...prev, status: 'idle' }));
       }, 3000);
@@ -127,7 +139,6 @@ export default function Dashboard() {
     }
   }, [syncStatus.lastSync, toast]);
 
-  // Auto-sync on first load
   useEffect(() => {
     if (!comparison) {
       handleSync();
@@ -146,7 +157,14 @@ export default function Dashboard() {
   const divergencesCount =
     (comparison?.missingFromVicarius.length || 0) +
     (comparison?.missingFromCortex.length || 0) +
-    (comparison?.missingFromWarp.length || 0);
+    (comparison?.missingFromWarp.length || 0) +
+    (comparison?.missingFromPam.length || 0) +
+    (comparison?.missingFromJumpcloud.length || 0);
+
+  const terminatedRiskCount = comparison?.terminatedWithActiveEndpoints.length || 0;
+  const terminatedInSystemsCount = 
+    (comparison?.terminatedInJumpcloud.length || 0) + 
+    (comparison?.terminatedInPam.length || 0);
 
   return (
     <MainLayout>
@@ -156,7 +174,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             <p className="text-muted-foreground">
-              Comparação de inventário entre ferramentas de segurança
+              Comparação de inventário entre 5 ferramentas de segurança
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -168,8 +186,25 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Risk Alert Banner */}
+        {terminatedRiskCount > 0 && (
+          <div className="mb-6 rounded-lg border border-destructive/50 bg-destructive/10 p-4 animate-fade-in">
+            <div className="flex items-center gap-3">
+              <UserX className="h-5 w-5 text-destructive" />
+              <div>
+                <p className="font-medium text-destructive">
+                  ⚠️ Alerta de Segurança: {terminatedRiskCount} endpoint(s) de colaboradores desligados detectado(s)
+                </p>
+                <p className="text-sm text-destructive/80">
+                  Verifique a página de Alertas para mais detalhes e tome as ações necessárias
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard
             title="Total de Endpoints"
             value={comparison?.allEndpoints.length || 0}
@@ -191,10 +226,17 @@ export default function Dashboard() {
             variant="success"
           />
           <StatCard
+            title="Risco Desligados"
+            value={terminatedRiskCount + terminatedInSystemsCount}
+            subtitle="Endpoints ou acessos ativos"
+            icon={<UserX className="h-5 w-5" />}
+            variant={terminatedRiskCount > 0 ? 'error' : 'default'}
+          />
+          <StatCard
             title="Status"
             value={syncStatus.status === 'syncing' ? 'Sincronizando' : 'Pronto'}
-            subtitle={syncStatus.message || 'Sistema operacional'}
-            icon={<Clock className="h-5 w-5" />}
+            subtitle="5 fontes monitoradas"
+            icon={<Shield className="h-5 w-5" />}
           />
         </div>
 
@@ -204,6 +246,8 @@ export default function Dashboard() {
             vicariusCount={endpointCounts.vicarius}
             cortexCount={endpointCounts.cortex}
             warpCount={endpointCounts.warp}
+            pamCount={endpointCounts.pam}
+            jumpcloudCount={endpointCounts.jumpcloud}
           />
           <AlertsPreview alerts={alerts} />
         </div>
