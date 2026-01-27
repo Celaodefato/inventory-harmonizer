@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { NormalizedEndpoint } from '@/types/inventory';
 import { cn } from '@/lib/utils';
+import { isEndpointCompliant, isWorkstation } from '@/lib/inventory';
 
 interface ComplianceModalProps {
     endpoints: NormalizedEndpoint[];
@@ -11,8 +12,8 @@ interface ComplianceModalProps {
 }
 
 export function ComplianceModal({ endpoints, onClose }: ComplianceModalProps) {
-    // Filter non-compliant: machines not in all 5 sources
-    const nonCompliant = endpoints.filter(e => e.sources.length < 5);
+    // Filter non-compliant: machines based on hostname patterns
+    const nonCompliant = endpoints.filter(e => !isEndpointCompliant(e));
 
     // Track checked machines
     const [checkedMachines, setCheckedMachines] = useState<Set<string>>(new Set());
@@ -88,7 +89,7 @@ export function ComplianceModal({ endpoints, onClose }: ComplianceModalProps) {
                                                     Todas as máquinas estão em compliance!
                                                 </p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    Todos os endpoints estão presentes nas 5 ferramentas.
+                                                    Todos os endpoints estão com as ferramentas obrigatórias instaladas.
                                                 </p>
                                             </div>
                                         </div>
@@ -97,7 +98,11 @@ export function ComplianceModal({ endpoints, onClose }: ComplianceModalProps) {
                             ) : (
                                 nonCompliant.map((endpoint, index) => {
                                     const allSources = ['vicarius', 'cortex', 'warp', 'pam', 'jumpcloud'];
-                                    const missing = allSources.filter(s => !endpoint.sources.includes(s as any));
+                                    const expectedSources = isWorkstation(endpoint.hostname)
+                                        ? allSources
+                                        : ['vicarius', 'cortex'];
+
+                                    const missing = expectedSources.filter(s => !endpoint.sources.includes(s as any));
                                     const isChecked = checkedMachines.has(endpoint.hostname);
 
                                     return (
@@ -160,9 +165,10 @@ export function ComplianceModal({ endpoints, onClose }: ComplianceModalProps) {
 
                 {/* Footer */}
                 <div className="border-t border-border p-4 bg-muted/20 flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        <strong>Compliance:</strong> Máquina presente nas 5 ferramentas (Vicarius, Cortex, Warp, PAM, JumpCloud)
-                    </p>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                        <p><strong>Workstations (EXA-*):</strong> Requerem as 5 ferramentas.</p>
+                        <p><strong>Servidores/Outros:</strong> Requerem apenas Vicarius e Cortex (XDR).</p>
+                    </div>
                     <Button onClick={onClose} variant="outline">
                         Fechar
                     </Button>

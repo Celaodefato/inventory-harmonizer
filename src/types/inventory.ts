@@ -41,6 +41,7 @@ export interface ComparisonResult {
   terminatedWithActiveEndpoints: NormalizedEndpoint[];
   terminatedInJumpcloud: TerminatedEmployee[];
   terminatedInPam: TerminatedEmployee[];
+  nonCompliant: NormalizedEndpoint[];
 }
 
 export interface ApiConfig {

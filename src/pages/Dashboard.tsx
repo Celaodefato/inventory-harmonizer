@@ -17,7 +17,7 @@ import {
   compareInventories,
   generateAlerts,
 } from '@/lib/inventory';
-import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync, getTerminatedEmployees, getOffboardingAlerts } from '@/lib/storage';
+import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync, getTerminatedEmployees, getOffboardingAlerts, cleanupOrphanedOffboardingAlerts } from '@/lib/storage';
 import { ComparisonResult, SyncStatus, Alert, SyncLog, OffboardingAlert } from '@/types/inventory';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -44,10 +44,11 @@ export default function Dashboard() {
 
   const { toast } = useToast();
 
-  // Calculate non-compliance count
-  const nonComplianceCount = comparison?.allEndpoints.filter(e => e.sources.length < 5).length || 0;
+  // Calculate non-compliance count based on new hostname-aware logic
+  const nonComplianceCount = comparison?.nonCompliant.length || 0;
 
   useEffect(() => {
+    cleanupOrphanedOffboardingAlerts();
     const savedAlerts = getAlerts();
     setAlerts(savedAlerts);
     setOffboardingAlerts(getOffboardingAlerts());
@@ -202,6 +203,18 @@ export default function Dashboard() {
                   CSV
                 </span>
               </div>
+              <Button
+                onClick={() => setShowComplianceModal(true)}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'border-destructive/30 text-destructive hover:bg-destructive/10',
+                  nonComplianceCount > 0 && 'animate-pulse'
+                )}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                {nonComplianceCount} Não Conformes
+              </Button>
               <Button
                 onClick={() => window.location.hash = '#/alerts?tab=offboarding'}
                 variant="outline"

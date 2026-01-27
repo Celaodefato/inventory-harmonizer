@@ -26,6 +26,34 @@ export function normalizeEndpoint(endpoint: Endpoint): NormalizedEndpoint {
   };
 }
 
+export function isWorkstation(hostname: string): boolean {
+  const h = hostname.toUpperCase();
+  return h.startsWith('EXA-ARKLX') ||
+    h.startsWith('EXA-ARKNT') ||
+    h.startsWith('EXA-ARKMAC') ||
+    h.startsWith('EXA-MAC');
+}
+
+export function isEndpointCompliant(endpoint: NormalizedEndpoint): boolean {
+  const hostname = endpoint.hostname.toUpperCase();
+  const isExaArk = hostname.startsWith('EXA-ARK');
+
+  if (isWorkstation(endpoint.hostname)) {
+    // Workstations (EXA-ARK*, EXA-MAC*)
+    if (isExaArk) {
+      // EXA-ARK machines don't need PAM (require 4 tools: Vicarius, Cortex, Warp, JumpCloud)
+      const required = ['vicarius', 'cortex', 'warp', 'jumpcloud'];
+      return required.every(s => endpoint.sources.includes(s as any));
+    }
+    // Other workstations (like EXA-MAC if not starting with EXA-ARK) might still need 5
+    // But based on user request, let's assume all EXA-* workstations are 5 EXCEPT EXA-ARK*
+    return endpoint.sources.length === 5;
+  } else {
+    // Servers/Others only need Vicarius and Cortex
+    return endpoint.sources.includes('vicarius') && endpoint.sources.includes('cortex');
+  }
+}
+
 export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
   if (!isApiConfigured('vicarius')) {
     const csvData = getCsvData().vicarius;
@@ -295,12 +323,16 @@ export function compareInventories(
     ),
     missingFromVicarius: allEndpoints.filter(e => !e.sources.includes('vicarius')),
     missingFromCortex: allEndpoints.filter(e => !e.sources.includes('cortex')),
-    missingFromWarp: allEndpoints.filter(e => !e.sources.includes('warp')),
-    missingFromPam: allEndpoints.filter(e => !e.sources.includes('pam')),
-    missingFromJumpcloud: allEndpoints.filter(e => !e.sources.includes('jumpcloud')),
+    missingFromWarp: allEndpoints.filter(e => isWorkstation(e.hostname) && !e.sources.includes('warp')),
+    missingFromPam: allEndpoints.filter(e => {
+      const h = e.hostname.toUpperCase();
+      return isWorkstation(e.hostname) && !h.startsWith('EXA-ARK') && !e.sources.includes('pam');
+    }),
+    missingFromJumpcloud: allEndpoints.filter(e => isWorkstation(e.hostname) && !e.sources.includes('jumpcloud')),
     terminatedWithActiveEndpoints,
     terminatedInJumpcloud,
     terminatedInPam,
+    nonCompliant: allEndpoints.filter(e => !isEndpointCompliant(e)),
   };
 }
 
@@ -342,7 +374,17 @@ export function generateAlerts(comparison: ComparisonResult): Alert[] {
     });
   }
 
-  // Standard missing alerts
+  if (comparison.nonCompliant.length > 0) {
+    alerts.push({
+      id: `alert-non-compliant-${Date.now()}`,
+      type: 'error',
+      title: 'Máquinas Fora de Compliance',
+      message: `${comparison.nonCompliant.length} máquina(s) não possuem todas as ferramentas obrigatórias instaladas`,
+      timestamp,
+    });
+  }
+
+  // Standard missing alerts - only show if there are actual gaps based on requirements
   if (comparison.missingFromVicarius.length > 0) {
     alerts.push({
       id: `alert-vic-${Date.now()}`,
@@ -365,24 +407,36 @@ export function generateAlerts(comparison: ComparisonResult): Alert[] {
     });
   }
 
+  if (comparison.missingFromWarp.length > 0) {
+    alerts.push({
+      id: `alert-warp-${Date.now()}`,
+      type: 'warning',
+      title: 'Ausentes no Warp',
+      message: `${comparison.missingFromWarp.length} workstation(s) sem Warp`,
+      timestamp,
+      source: 'warp',
+    });
+  }
+
   if (comparison.missingFromJumpcloud.length > 0) {
     alerts.push({
       id: `alert-jc-${Date.now()}`,
       type: 'warning',
       title: 'Ausentes no JumpCloud',
-      message: `${comparison.missingFromJumpcloud.length} endpoint(s) sem registro no JumpCloud`,
+      message: `${comparison.missingFromJumpcloud.length} workstation(s) sem registro no JumpCloud`,
       timestamp,
       source: 'jumpcloud',
     });
   }
 
-  if (comparison.inAllSources.length > 0) {
+  if (comparison.missingFromPam.length > 0) {
     alerts.push({
-      id: `alert-all-${Date.now()}`,
-      type: 'info',
-      title: 'Endpoints sincronizados',
-      message: `${comparison.inAllSources.length} máquina(s) presente(s) em todas as ferramentas`,
+      id: `alert-pam-${Date.now()}`,
+      type: 'warning',
+      title: 'Ausentes no PAM',
+      message: `${comparison.missingFromPam.length} workstation(s) (não EXA-ARK) sem acesso ao PAM`,
       timestamp,
+      source: 'pam',
     });
   }
 

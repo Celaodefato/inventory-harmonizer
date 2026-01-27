@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { NormalizedEndpoint } from '@/types/inventory';
-import { exportToCSV } from '@/lib/inventory';
+import { exportToCSV, isEndpointCompliant } from '@/lib/inventory';
 import { sanitizeInput } from '@/lib/validation';
 import { cn } from '@/lib/utils';
 
@@ -46,7 +46,7 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
 
     if (sourceFilter !== 'all') {
       if (sourceFilter === 'missing-any') {
-        result = result.filter((e) => e.sources.length < 5);
+        result = result.filter((e) => !isEndpointCompliant(e));
       } else if (sourceFilter === 'risk') {
         result = result.filter((e) => e.riskLevel === 'high');
       } else {
@@ -241,7 +241,7 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
                     'border-b border-border last:border-0 transition-colors',
                     'hover:bg-primary/5',
                     endpoint.riskLevel === 'high' && 'bg-destructive/5',
-                    endpoint.sources.length < 5 && endpoint.riskLevel !== 'high' && 'bg-warning/5'
+                    !isEndpointCompliant(endpoint) && endpoint.riskLevel !== 'high' && 'bg-warning/5'
                   )}
                 >
                   <td className="px-4 py-4 text-sm font-medium text-card-foreground">
@@ -285,7 +285,7 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
                         <AlertTriangle className="mr-1 h-3 w-3" />
                         Risco
                       </Badge>
-                    ) : endpoint.sources.length === 5 ? (
+                    ) : isEndpointCompliant(endpoint) ? (
                       <Badge variant="outline" className="bg-success/10 text-success border-success/30">
                         Ativo
                       </Badge>

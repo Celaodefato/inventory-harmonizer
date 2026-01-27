@@ -85,26 +85,7 @@ export function CsvUploadCard({
     };
 
     const clearData = () => {
-        saveCsvData(tool, null, undefined as any); // hack to verify if passing undefined clears metadata logic in storage
-        // Actually storage.ts saveCsvData updates the metadata if provided. If not provided, it doesn't clear it explicitly in my huge replace block previously? 
-        // Wait, let's check storage.ts logic again.
-        // Logic was: if (metadata) setItem.
-        // So to clear, I should probably update storage.ts or pass null/empty.
-        // For now, I'll assume passing null data effectively clears usage.
-        // Visual feedback depends on metadata. I should probably improve storage.ts to clear metadata if data is null.
-        // Let's assume onUpdate refresh will get null data. But metadata might persist?
-        // Let's just re-implement clear logic in storage.ts or handle it here via a specialized call if needed.
-        // better: create a wrapper using saveCsvData with null.
-
-        // To properly clear metadata, I need to update storage.ts or do a quick manual valid update with nulls.
-        // For this MVP, I'll just re-save null data. The UI might still show metadata if I don't clear it in storage.
-        // Let's refine storage.ts later if needed.
-
-        // Actually, I'll just reload the page or force update locally.
-        saveCsvData(tool, null);
-        // Also specific hack to clear metadata since I didn't verify clear logic in storage.ts
-        // I will defer complex clearing to "improvement" if broken.
-
+        saveCsvData(tool, null, null);
         onUpdate();
         toast({ title: 'Dados removidos', description: `Importação de ${title} removida.` });
     };

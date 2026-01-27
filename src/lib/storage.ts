@@ -216,6 +216,17 @@ export function addOffboardingAlert(alert: OffboardingAlert): void {
   saveOffboardingAlerts(alerts);
 }
 
+export function cleanupOrphanedOffboardingAlerts(): void {
+  const alerts = getOffboardingAlerts();
+  const employees = getTerminatedEmployees();
+  const employeeIds = new Set(employees.map(e => e.id));
+
+  const filteredAlerts = alerts.filter(a => employeeIds.has(a.employeeId));
+  if (filteredAlerts.length !== alerts.length) {
+    saveOffboardingAlerts(filteredAlerts);
+  }
+}
+
 export function updateOffboardingAlert(alert: OffboardingAlert): void {
   const alerts = getOffboardingAlerts();
   const index = alerts.findIndex((a) => a.id === alert.id);
@@ -229,6 +240,11 @@ export function deleteTerminatedEmployee(id: string): void {
   const employees = getTerminatedEmployees();
   const filtered = employees.filter((e) => e.id !== id);
   saveTerminatedEmployees(filtered);
+
+  // Also remove associated offboarding alert
+  const alerts = getOffboardingAlerts();
+  const filteredAlerts = alerts.filter((a) => a.employeeId !== id);
+  saveOffboardingAlerts(filteredAlerts);
 }
 
 export function updateTerminatedEmployee(employee: TerminatedEmployee): void {
@@ -268,13 +284,13 @@ export function getCsvData(): CsvData {
   return defaultCsvData;
 }
 
-export function saveCsvData(tool: keyof CsvData, data: any[] | null, metadata?: CsvMetadata): void {
+export function saveCsvData(tool: keyof CsvData, data: any[] | null, metadata?: CsvMetadata | null): void {
   try {
     const current = getCsvData();
     const updated = { ...current, [tool]: data };
     localStorage.setItem(STORAGE_KEYS.CSV_DATA, JSON.stringify(updated));
 
-    if (metadata) {
+    if (metadata !== undefined) {
       const allMeta = getCsvMetadata();
       allMeta[tool] = metadata;
       localStorage.setItem('inventory_csv_metadata', JSON.stringify(allMeta));

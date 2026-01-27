@@ -1,73 +1,63 @@
-# Welcome to your Lovable project
+# Inventory Harmonizer
 
-## Project info
+Uma ferramenta para reconciliação de inventário de segurança entre múltiplas fontes.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Objetivo
+Garantir a conformidade de endpoints cruzando dados de 5 fontes principais:
+- **Vicarius** (Vulnerability Management)
+- **Cortex** (XDR)
+- **Warp** (Zero Trust)
+- **PAM - Senha Segura** (Privileged Access)
+- **JumpCloud** (Directory/MDM)
 
-## How can I edit this code?
+A aplicação também cruza esses dados com uma lista de **Colaboradores Desligados** para identificar riscos de segurança (ex: usuário desligado com máquina ativa).
 
-There are several ways of editing your application.
+## Tecnologias
+- Vite + React + TypeScript
+- Tailwind CSS + shadcn/ui
+- Lucide React (Ícones)
+- Vitest (Testes)
 
-**Use Lovable**
+## Como Executar
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+### Pré-requisitos
+- Node.js (v18+)
+- npm ou bun
 
-Changes made via Lovable will be committed automatically to this repo.
+### Instalação
+1. Clone o repositório
+2. Instale as dependências:
+   ```sh
+   npm install
+   ```
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
+### Desenvolvimento
+Inicie o servidor local:
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
+A aplicação estará disponível em `http://localhost:8080`.
 
-**Edit a file directly in GitHub**
+### Build
+Para gerar a versão de produção:
+```sh
+npm run build
+```
+Os arquivos serão gerados na pasta `dist/`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Configuração
+A aplicação pode funcionar em **Modo Demonstração** (com dados mockados) ou conectada às **APIs Reais**.
 
-**Use GitHub Codespaces**
+Para configurar as APIs:
+1. Acesse a página **Configurar APIs** no menu lateral.
+2. Insira as credenciais de cada ferramenta.
+3. Ou faça upload de um arquivo **CSV** para cada ferramenta.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+> [!NOTE]
+> Nenhum dado sensível ou configuração de API é versionado no Git. Todas as configurações são armazenadas localmente no navegador (`localStorage`).
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## Testes
+Para rodar a suíte de testes:
+```sh
+npm test
+```
