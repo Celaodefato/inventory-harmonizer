@@ -1,6 +1,7 @@
 import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -38,7 +39,7 @@ export function AppSidebar() {
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-primary'
+                    ? 'bg-sidebar-accent text-sidebar-primary shadow-md shadow-primary/20'
                     : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )}
               >
@@ -51,13 +52,16 @@ export function AppSidebar() {
 
         {/* Footer */}
         <div className="border-t border-sidebar-border p-4">
-          <div className="rounded-lg bg-sidebar-accent/50 p-3">
-            <p className="text-xs text-muted-foreground">
-              5 fontes configuradas
-            </p>
-            <p className="mt-1 text-xs text-primary">
-              Vicarius • Cortex • Warp • PAM • JumpCloud
-            </p>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex-1 rounded-lg bg-sidebar-accent/50 p-3">
+              <p className="text-xs text-muted-foreground">
+                5 fontes configuradas
+              </p>
+              <p className="mt-1 text-xs text-primary">
+                Vicarius • Cortex • Warp • PAM • JumpCloud
+              </p>
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </div>

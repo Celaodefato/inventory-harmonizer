@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   ALERTS: 'inventory_alerts',
   LAST_SYNC: 'inventory_last_sync',
   TERMINATED_EMPLOYEES: 'inventory_terminated_employees',
+  CSV_DATA: 'inventory_csv_data',
 };
 
 const defaultApiConfig: ApiConfig = {
@@ -14,6 +15,14 @@ const defaultApiConfig: ApiConfig = {
   warp: { baseUrl: '', apiToken: '' },
   pam: { baseUrl: '', apiToken: '' },
   jumpcloud: { baseUrl: '', apiToken: '' },
+};
+
+const defaultCsvData = {
+  vicarius: null,
+  cortex: null,
+  warp: null,
+  pam: null,
+  jumpcloud: null,
 };
 
 export function getApiConfig(): ApiConfig {
@@ -171,4 +180,56 @@ export function updateTerminatedEmployee(employee: TerminatedEmployee): void {
     employees[index] = employee;
     saveTerminatedEmployees(employees);
   }
+}
+
+// CSV Data functions
+export interface CsvData {
+  vicarius: any[] | null;
+  cortex: any[] | null;
+  warp: any[] | null;
+  pam: any[] | null;
+  jumpcloud: any[] | null;
+}
+
+export interface CsvMetadata {
+  tool: keyof CsvData;
+  filename: string;
+  timestamp: string;
+  count: number;
+}
+
+export function getCsvData(): CsvData {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.CSV_DATA);
+    if (stored) {
+      return { ...defaultCsvData, ...JSON.parse(stored) };
+    }
+  } catch (error) {
+    console.error('Error reading CSV data from localStorage:', error);
+  }
+  return defaultCsvData;
+}
+
+export function saveCsvData(tool: keyof CsvData, data: any[] | null, metadata?: CsvMetadata): void {
+  try {
+    const current = getCsvData();
+    const updated = { ...current, [tool]: data };
+    localStorage.setItem(STORAGE_KEYS.CSV_DATA, JSON.stringify(updated));
+
+    if (metadata) {
+      const allMeta = getCsvMetadata();
+      allMeta[tool] = metadata;
+      localStorage.setItem('inventory_csv_metadata', JSON.stringify(allMeta));
+    }
+  } catch (error) {
+    console.error('Error saving CSV data to localStorage:', error);
+  }
+}
+
+export function getCsvMetadata(): Record<string, CsvMetadata | null> {
+  try {
+    const stored = localStorage.getItem('inventory_csv_metadata');
+    if (stored) return JSON.parse(stored);
+  } catch (e) { console.error(e); }
+  return { vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null };
 }

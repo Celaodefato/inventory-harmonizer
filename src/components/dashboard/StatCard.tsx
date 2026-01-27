@@ -28,7 +28,8 @@ export function StatCard({ title, value, subtitle, icon, variant = 'default' }: 
   return (
     <div
       className={cn(
-        'rounded-xl border bg-card p-5 transition-all duration-200 hover:shadow-lg animate-fade-in',
+        'rounded-xl border bg-card p-5 transition-all duration-200 animate-fade-in',
+        'hover:shadow-lg hover:shadow-primary/10 hover:border-primary/30',
         variantStyles[variant]
       )}
     >

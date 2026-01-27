@@ -1,12 +1,12 @@
 import { Endpoint, NormalizedEndpoint, ComparisonResult, Alert, TerminatedEmployee } from '@/types/inventory';
-import { 
-  mockVicariusEndpoints, 
-  mockCortexEndpoints, 
+import {
+  mockVicariusEndpoints,
+  mockCortexEndpoints,
   mockWarpEndpoints,
   mockPamEndpoints,
-  mockJumpcloudEndpoints 
+  mockJumpcloudEndpoints
 } from '@/data/mockData';
-import { getApiConfig, isApiConfigured, getTerminatedEmployees } from './storage';
+import { getApiConfig, isApiConfigured, getTerminatedEmployees, getCsvData } from './storage';
 
 function normalizeHostname(hostname: string): string {
   return hostname.toLowerCase().trim();
@@ -20,6 +20,7 @@ export function normalizeEndpoint(endpoint: Endpoint): NormalizedEndpoint {
     os: endpoint.os,
     lastSeen: endpoint.lastSeen,
     sources: [endpoint.source],
+    sourceOrigins: { [endpoint.source]: endpoint.origin },
     userId: endpoint.userId,
     userEmail: endpoint.userEmail,
   };
@@ -27,6 +28,9 @@ export function normalizeEndpoint(endpoint: Endpoint): NormalizedEndpoint {
 
 export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
   if (!isApiConfigured('vicarius')) {
+    const csvData = getCsvData().vicarius;
+    if (csvData && csvData.length > 0) return csvData;
+
     await new Promise(resolve => setTimeout(resolve, 500));
     return mockVicariusEndpoints;
   }
@@ -39,9 +43,9 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) throw new Error(`Vicarius API error: ${response.status}`);
-    
+
     const data = await response.json();
     return data.map((item: any) => ({
       id: item.id || item.uuid,
@@ -51,6 +55,7 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
       os: item.os || item.operatingSystem,
       lastSeen: item.lastSeen || item.lastSeenAt,
       source: 'vicarius' as const,
+      origin: 'api' as const,
       userEmail: item.userEmail || item.user_email,
     }));
   } catch (error) {
@@ -61,6 +66,9 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
 
 export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
   if (!isApiConfigured('cortex')) {
+    const csvData = getCsvData().cortex;
+    if (csvData && csvData.length > 0) return csvData;
+
     await new Promise(resolve => setTimeout(resolve, 600));
     return mockCortexEndpoints;
   }
@@ -73,9 +81,9 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) throw new Error(`Cortex API error: ${response.status}`);
-    
+
     const data = await response.json();
     return data.map((item: any) => ({
       id: item.id || item.endpoint_id,
@@ -85,6 +93,7 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
       os: item.os || item.platform,
       lastSeen: item.lastSeen || item.last_seen,
       source: 'cortex' as const,
+      origin: 'api' as const,
       userEmail: item.userEmail || item.user_email,
     }));
   } catch (error) {
@@ -95,6 +104,9 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
 
 export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
   if (!isApiConfigured('warp')) {
+    const csvData = getCsvData().warp;
+    if (csvData && csvData.length > 0) return csvData;
+
     await new Promise(resolve => setTimeout(resolve, 550));
     return mockWarpEndpoints;
   }
@@ -107,9 +119,9 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) throw new Error(`Warp API error: ${response.status}`);
-    
+
     const data = await response.json();
     return data.map((item: any) => ({
       id: item.id || item.device_id,
@@ -119,6 +131,7 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
       os: item.os || item.os_type,
       lastSeen: item.lastSeen || item.last_connected,
       source: 'warp' as const,
+      origin: 'api' as const,
       userEmail: item.userEmail || item.user_email,
     }));
   } catch (error) {
@@ -129,6 +142,9 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
 
 export async function fetchPamEndpoints(): Promise<Endpoint[]> {
   if (!isApiConfigured('pam')) {
+    const csvData = getCsvData().pam;
+    if (csvData && csvData.length > 0) return csvData;
+
     await new Promise(resolve => setTimeout(resolve, 520));
     return mockPamEndpoints;
   }
@@ -141,9 +157,9 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) throw new Error(`PAM API error: ${response.status}`);
-    
+
     const data = await response.json();
     return data.map((item: any) => ({
       id: item.id || item.asset_id,
@@ -153,6 +169,7 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
       os: item.os || item.operating_system,
       lastSeen: item.lastSeen || item.last_access,
       source: 'pam' as const,
+      origin: 'api' as const,
       userEmail: item.userEmail || item.owner_email,
     }));
   } catch (error) {
@@ -163,6 +180,9 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
 
 export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
   if (!isApiConfigured('jumpcloud')) {
+    const csvData = getCsvData().jumpcloud;
+    if (csvData && csvData.length > 0) return csvData;
+
     await new Promise(resolve => setTimeout(resolve, 580));
     return mockJumpcloudEndpoints;
   }
@@ -175,9 +195,9 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) throw new Error(`JumpCloud API error: ${response.status}`);
-    
+
     const data = await response.json();
     return data.map((item: any) => ({
       id: item.id || item._id,
@@ -187,6 +207,7 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
       os: item.os || item.osFamily,
       lastSeen: item.lastSeen || item.lastContact,
       source: 'jumpcloud' as const,
+      origin: 'api' as const,
       userEmail: item.userEmail || item.primaryEmail,
     }));
   } catch (error) {
@@ -213,13 +234,14 @@ export function compareInventories(
   const processEndpoints = (endpoints: Endpoint[], source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud') => {
     endpoints.forEach(endpoint => {
       if (!endpoint.hostname) return; // Skip if no hostname
-      
+
       const key = getKey(endpoint);
       const existing = endpointMap.get(key);
-      
+
       if (existing) {
         if (!existing.sources.includes(source)) {
           existing.sources.push(source);
+          existing.sourceOrigins[source] = endpoint.origin;
         }
         if (endpoint.userEmail && !existing.userEmail) {
           existing.userEmail = endpoint.userEmail;
@@ -251,13 +273,13 @@ export function compareInventories(
 
   // Find terminated employees still in JumpCloud
   const jumpcloudEmails = new Set(jumpcloudEndpoints.map(e => e.userEmail?.toLowerCase()).filter(Boolean));
-  const terminatedInJumpcloud = terminatedEmployees.filter(te => 
+  const terminatedInJumpcloud = terminatedEmployees.filter(te =>
     jumpcloudEmails.has(te.email.toLowerCase())
   );
 
   // Find terminated employees still in PAM
   const pamEmails = new Set(pamEndpoints.map(e => e.userEmail?.toLowerCase()).filter(Boolean));
-  const terminatedInPam = terminatedEmployees.filter(te => 
+  const terminatedInPam = terminatedEmployees.filter(te =>
     pamEmails.has(te.email.toLowerCase())
   );
 
@@ -268,9 +290,9 @@ export function compareInventories(
     onlyWarp: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('warp')),
     onlyPam: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('pam')),
     onlyJumpcloud: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('jumpcloud')),
-    inAllSources: allEndpoints.filter(e => 
-      e.sources.includes('vicarius') && 
-      e.sources.includes('cortex') && 
+    inAllSources: allEndpoints.filter(e =>
+      e.sources.includes('vicarius') &&
+      e.sources.includes('cortex') &&
       e.sources.includes('warp') &&
       e.sources.includes('pam') &&
       e.sources.includes('jumpcloud')

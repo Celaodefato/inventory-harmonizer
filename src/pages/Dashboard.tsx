@@ -162,8 +162,8 @@ export default function Dashboard() {
     (comparison?.missingFromJumpcloud.length || 0);
 
   const terminatedRiskCount = comparison?.terminatedWithActiveEndpoints.length || 0;
-  const terminatedInSystemsCount = 
-    (comparison?.terminatedInJumpcloud.length || 0) + 
+  const terminatedInSystemsCount =
+    (comparison?.terminatedInJumpcloud.length || 0) +
     (comparison?.terminatedInPam.length || 0);
 
   return (
@@ -177,12 +177,25 @@ export default function Dashboard() {
               Comparação de inventário entre 5 ferramentas de segurança
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="text-right text-sm">
               <p className="text-muted-foreground">Última sincronização</p>
               <p className="font-medium text-foreground">{formatLastSync(syncStatus.lastSync)}</p>
             </div>
-            <SyncButton syncStatus={syncStatus} onSync={handleSync} />
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-success/10 text-success border border-success/20">
+                  API
+                </span>
+                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
+                  CSV
+                </span>
+                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-muted/30 text-muted-foreground border border-muted">
+                  MOCK
+                </span>
+              </div>
+              <SyncButton syncStatus={syncStatus} onSync={handleSync} />
+            </div>
           </div>
         </div>
 

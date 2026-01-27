@@ -174,8 +174,8 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
       {/* Table */}
       <div className="overflow-x-auto scrollbar-thin">
         <table className="w-full">
-          <thead>
-            <tr className="border-b border-border bg-muted/30">
+          <thead className="sticky top-0 z-10 bg-muted/30 backdrop-blur-sm">
+            <tr className="border-b border-border">
               <th
                 className="cursor-pointer px-4 py-3 text-left text-sm font-medium text-muted-foreground hover:text-foreground"
                 onClick={() => handleSort('hostname')}
@@ -238,34 +238,45 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
                 <tr
                   key={`${endpoint.hostname}-${index}`}
                   className={cn(
-                    'table-row-hover border-b border-border last:border-0',
+                    'border-b border-border last:border-0 transition-colors',
+                    'hover:bg-primary/5',
                     endpoint.riskLevel === 'high' && 'bg-destructive/5',
                     endpoint.sources.length < 5 && endpoint.riskLevel !== 'high' && 'bg-warning/5'
                   )}
                 >
-                  <td className="px-4 py-3 text-sm font-medium text-card-foreground">
+                  <td className="px-4 py-4 text-sm font-medium text-card-foreground">
                     {endpoint.hostname}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground font-mono">
+                  <td className="px-4 py-4 text-sm text-muted-foreground font-mono">
                     {endpoint.ip}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                  <td className="px-4 py-4 text-sm text-muted-foreground">
                     {endpoint.os || '-'}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                  <td className="px-4 py-4 text-sm text-muted-foreground">
                     {endpoint.userEmail || '-'}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {endpoint.sources.map((source) => (
-                        <Badge
-                          key={source}
-                          variant="outline"
-                          className={cn('text-xs', getSourceBadgeVariant(source))}
-                        >
-                          {source}
-                        </Badge>
-                      ))}
+                    <div className="flex flex-wrap gap-2">
+                      {endpoint.sources.map((source) => {
+                        const origin = endpoint.sourceOrigins[source];
+                        return (
+                          <div key={source} className="flex flex-col items-center gap-0.5">
+                            <Badge
+                              variant="outline"
+                              className={cn('text-xs min-w-[70px] justify-center', getSourceBadgeVariant(source))}
+                            >
+                              {source}
+                            </Badge>
+                            <span className={cn(
+                              "text-[9px] font-bold uppercase tracking-wider px-1 rounded-sm",
+                              origin === 'api' ? "text-success" : origin === 'csv' ? "text-primary" : "text-muted-foreground/60"
+                            )}>
+                              {origin}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -292,9 +303,13 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
       </div>
 
       {/* Footer */}
-      <div className="border-t border-border px-4 py-3">
+      <div className="border-t border-border px-4 py-3 bg-muted/20">
         <p className="text-sm text-muted-foreground">
-          Mostrando {filteredAndSortedEndpoints.length} de {endpoints.length} endpoints
+          {filteredAndSortedEndpoints.length === endpoints.length ? (
+            `${endpoints.length} endpoint${endpoints.length !== 1 ? 's' : ''} total`
+          ) : (
+            `Mostrando ${filteredAndSortedEndpoints.length} de ${endpoints.length} endpoints`
+          )}
         </p>
       </div>
     </div>

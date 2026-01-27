@@ -6,6 +6,7 @@ export interface Endpoint {
   os?: string;
   lastSeen?: string;
   source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud';
+  origin: 'api' | 'csv' | 'mock';
   userId?: string;
   userEmail?: string;
 }
@@ -17,6 +18,7 @@ export interface NormalizedEndpoint {
   os?: string;
   lastSeen?: string;
   sources: ('vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud')[];
+  sourceOrigins: Record<string, 'api' | 'csv' | 'mock'>;
   userId?: string;
   userEmail?: string;
   riskLevel?: 'none' | 'low' | 'medium' | 'high';
