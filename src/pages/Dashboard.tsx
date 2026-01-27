@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Server, AlertTriangle, CheckCircle2, Clock, UserX, Shield } from 'lucide-react';
+import { Server, AlertTriangle, CheckCircle2, Clock, UserX, Shield, ShieldAlert } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SyncButton } from '@/components/dashboard/SyncButton';
@@ -17,8 +17,8 @@ import {
   compareInventories,
   generateAlerts,
 } from '@/lib/inventory';
-import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync, getTerminatedEmployees } from '@/lib/storage';
-import { ComparisonResult, SyncStatus, Alert, SyncLog } from '@/types/inventory';
+import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync, getTerminatedEmployees, getOffboardingAlerts } from '@/lib/storage';
+import { ComparisonResult, SyncStatus, Alert, SyncLog, OffboardingAlert } from '@/types/inventory';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -32,6 +32,7 @@ export default function Dashboard() {
   });
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [offboardingAlerts, setOffboardingAlerts] = useState<OffboardingAlert[]>([]);
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [endpointCounts, setEndpointCounts] = useState({
     vicarius: 0,
@@ -49,6 +50,7 @@ export default function Dashboard() {
   useEffect(() => {
     const savedAlerts = getAlerts();
     setAlerts(savedAlerts);
+    setOffboardingAlerts(getOffboardingAlerts());
   }, []);
 
   const handleSync = useCallback(async () => {
@@ -173,6 +175,8 @@ export default function Dashboard() {
     (comparison?.terminatedInJumpcloud.length || 0) +
     (comparison?.terminatedInPam.length || 0);
 
+  const pendingOffboardingCount = offboardingAlerts.filter(a => a.status !== 'completed').length;
+
   return (
     <MainLayout>
       <div className="p-6 lg:p-8">
@@ -199,16 +203,16 @@ export default function Dashboard() {
                 </span>
               </div>
               <Button
-                onClick={() => setShowComplianceModal(true)}
+                onClick={() => window.location.hash = '#/alerts?tab=offboarding'}
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'border-destructive/30 text-destructive hover:bg-destructive/10',
-                  nonComplianceCount > 0 && 'animate-pulse'
+                  'border-primary/30 text-primary hover:bg-primary/10',
+                  pendingOffboardingCount > 0 && 'animate-pulse'
                 )}
               >
-                <AlertTriangle className="mr-2 h-4 w-4" />
-                {nonComplianceCount} Não Conformes
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                {pendingOffboardingCount} Offboardings Pendentes
               </Button>
               <SyncButton syncStatus={syncStatus} onSync={handleSync} />
             </div>

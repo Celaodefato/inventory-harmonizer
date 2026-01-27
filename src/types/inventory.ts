@@ -97,6 +97,37 @@ export interface SyncStatus {
   message?: string;
 }
 
+export type OffboardingStatus = 'pending' | 'in_progress' | 'completed';
+
+export interface OffboardingChecklist {
+  // Identidade & Acesso
+  adDisabled: boolean;
+  adMoved: boolean;
+  googleDisabled: boolean;
+  googlePasswordChanged: boolean;
+  autoReplySet: boolean;
+  googleTakeoutDone: boolean;
+  // Ativos & Máquina
+  machineCollected: boolean;
+  machineBackup: boolean;
+  glpiUpdated: boolean;
+  // Licenças
+  licensesRemoved: boolean;
+  licensesConfirmed: boolean;
+}
+
+export interface OffboardingAlert {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  createdAt: string;
+  status: OffboardingStatus;
+  checklist: OffboardingChecklist;
+  responsible?: string;
+  notes?: string;
+}
+
 export interface TerminatedEmployee {
   id: string;
   name: string;

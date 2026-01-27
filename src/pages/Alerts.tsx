@@ -1,13 +1,16 @@
 import { forwardRef, useState, useEffect } from 'react';
-import { AlertTriangle, Info, AlertCircle, Trash2, Bell } from 'lucide-react';
+import { AlertTriangle, Info, AlertCircle, Trash2, Bell, UserX, ShieldAlert } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { getAlerts, clearAlerts } from '@/lib/storage';
-import { Alert } from '@/types/inventory';
+import { getAlerts, clearAlerts, getOffboardingAlerts } from '@/lib/storage';
+import { Alert, OffboardingAlert } from '@/types/inventory';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { OffboardingAlertCard } from '@/components/offboarding/OffboardingAlertCard';
+import { OffboardingDetailModal } from '@/components/offboarding/OffboardingDetailModal';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const alertIcons = {
   info: Info,
@@ -44,11 +47,18 @@ const typeLabels = {
 
 const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [offboardingAlerts, setOffboardingAlerts] = useState<OffboardingAlert[]>([]);
+  const [selectedOffboarding, setSelectedOffboarding] = useState<OffboardingAlert | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
+  const loadAlerts = () => {
+    setAlerts(getAlerts());
+    setOffboardingAlerts(getOffboardingAlerts());
+  };
+
   useEffect(() => {
-    const savedAlerts = getAlerts();
-    setAlerts(savedAlerts);
+    loadAlerts();
   }, []);
 
   const handleClearAlerts = () => {
@@ -72,6 +82,7 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
     info: alerts.filter((a) => a.type === 'info').length,
     warning: alerts.filter((a) => a.type === 'warning').length,
     error: alerts.filter((a) => a.type === 'error').length,
+    offboarding: offboardingAlerts.filter(a => a.status !== 'completed').length
   };
 
   return (
@@ -94,7 +105,7 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
         </div>
 
         {/* Summary Cards */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid gap-4 sm:grid-cols-4">
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
@@ -130,69 +141,121 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
               </div>
             </div>
           </div>
+
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+                <ShieldAlert className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{alertCounts.offboarding}</p>
+                <p className="text-sm text-muted-foreground">Offboardings TI</p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Alerts List */}
-        <div className="rounded-xl border border-border bg-card">
-          {alerts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Bell className="mb-4 h-12 w-12 text-muted-foreground/30" />
-              <h3 className="text-lg font-medium text-foreground">Nenhum alerta</h3>
-              <p className="text-sm text-muted-foreground">
-                Sincronize os dados para verificar divergências
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {alerts.map((alert) => {
-                const Icon = alertIcons[alert.type];
-                const styles = alertStyles[alert.type];
-                return (
-                  <div
-                    key={alert.id}
-                    className={cn(
-                      'flex items-start gap-4 p-4 transition-colors animate-fade-in',
-                      styles.bg
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-                        styles.bg
-                      )}
-                    >
-                      <Icon className={cn('h-5 w-5', styles.icon)} />
-                    </div>
+        <Tabs defaultValue="system" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="system">Alertas do Sistema ({alerts.length})</TabsTrigger>
+            <TabsTrigger value="offboarding">Offboarding TI Corp ({offboardingAlerts.length})</TabsTrigger>
+          </TabsList>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
+          <TabsContent value="system" className="mt-0">
+            <div className="rounded-xl border border-border bg-card">
+              {alerts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Bell className="mb-4 h-12 w-12 text-muted-foreground/30" />
+                  <h3 className="text-lg font-medium text-foreground">Nenhum alerta</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sincronize os dados para verificar divergências
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {alerts.map((alert) => {
+                    const Icon = alertIcons[alert.type];
+                    const styles = alertStyles[alert.type];
+                    return (
+                      <div
+                        key={alert.id}
+                        className={cn(
+                          'flex items-start gap-4 p-4 transition-colors animate-fade-in',
+                          styles.bg
+                        )}
+                      >
+                        <div
                           className={cn(
-                            'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                            styles.badge
+                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+                            styles.bg
                           )}
                         >
-                          {typeLabels[alert.type]}
-                        </span>
-                        {alert.source && (
-                          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                            {alert.source}
-                          </span>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {formatTimestamp(alert.timestamp)}
-                        </span>
-                      </div>
+                          <Icon className={cn('h-5 w-5', styles.icon)} />
+                        </div>
 
-                      <h4 className="mt-1 font-medium text-foreground">{alert.title}</h4>
-                      <p className="text-sm text-muted-foreground">{alert.message}</p>
-                    </div>
-                  </div>
-                );
-              })}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span
+                              className={cn(
+                                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                                styles.badge
+                              )}
+                            >
+                              {typeLabels[alert.type]}
+                            </span>
+                            {alert.source && (
+                              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                {alert.source}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {formatTimestamp(alert.timestamp)}
+                            </span>
+                          </div>
+
+                          <h4 className="mt-1 font-medium text-foreground">{alert.title}</h4>
+                          <p className="text-sm text-muted-foreground">{alert.message}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="offboarding" className="mt-0">
+            <div className="grid gap-4 md:grid-cols-2">
+              {offboardingAlerts.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center py-16 text-center rounded-xl border border-dashed border-border bg-card">
+                  <UserX className="mb-4 h-12 w-12 text-muted-foreground/30" />
+                  <h3 className="text-lg font-medium text-foreground">Nenhum offboarding pendente</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Novos alertas serão gerados automaticamente ao cadastrar desligados
+                  </p>
+                </div>
+              ) : (
+                offboardingAlerts.map((oAlert) => (
+                  <OffboardingAlertCard
+                    key={oAlert.id}
+                    alert={oAlert}
+                    onClick={() => {
+                      setSelectedOffboarding(oAlert);
+                      setIsModalOpen(true);
+                    }}
+                  />
+                ))
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <OffboardingDetailModal
+          alert={selectedOffboarding}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onUpdate={loadAlerts}
+        />
       </div>
     </MainLayout>
   );

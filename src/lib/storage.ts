@@ -1,4 +1,4 @@
-import { ApiConfig, SyncLog, Alert, TerminatedEmployee } from '@/types/inventory';
+import { ApiConfig, SyncLog, Alert, TerminatedEmployee, OffboardingAlert } from '@/types/inventory';
 
 const STORAGE_KEYS = {
   API_CONFIG: 'inventory_api_config',
@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   LAST_SYNC: 'inventory_last_sync',
   TERMINATED_EMPLOYEES: 'inventory_terminated_employees',
   CSV_DATA: 'inventory_csv_data',
+  OFFBOARDING_ALERTS: 'inventory_offboarding_alerts',
 };
 
 const defaultApiConfig: ApiConfig = {
@@ -165,6 +166,63 @@ export function addTerminatedEmployee(employee: TerminatedEmployee): void {
   const employees = getTerminatedEmployees();
   employees.unshift(employee);
   saveTerminatedEmployees(employees);
+
+  // Automatically create offboarding alert
+  const offboardingAlert: OffboardingAlert = {
+    id: `oa-${Date.now()}`,
+    employeeId: employee.id,
+    employeeName: employee.name,
+    employeeEmail: employee.email,
+    createdAt: new Date().toISOString(),
+    status: 'pending',
+    checklist: {
+      adDisabled: false,
+      adMoved: false,
+      googleDisabled: false,
+      googlePasswordChanged: false,
+      autoReplySet: false,
+      googleTakeoutDone: false,
+      machineCollected: false,
+      machineBackup: false,
+      glpiUpdated: false,
+      licensesRemoved: false,
+      licensesConfirmed: false,
+    },
+  };
+  addOffboardingAlert(offboardingAlert);
+}
+
+export function getOffboardingAlerts(): OffboardingAlert[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.OFFBOARDING_ALERTS);
+    if (stored) return JSON.parse(stored);
+  } catch (error) {
+    console.error('Error reading offboarding alerts:', error);
+  }
+  return [];
+}
+
+export function saveOffboardingAlerts(alerts: OffboardingAlert[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.OFFBOARDING_ALERTS, JSON.stringify(alerts));
+  } catch (error) {
+    console.error('Error saving offboarding alerts:', error);
+  }
+}
+
+export function addOffboardingAlert(alert: OffboardingAlert): void {
+  const alerts = getOffboardingAlerts();
+  alerts.unshift(alert);
+  saveOffboardingAlerts(alerts);
+}
+
+export function updateOffboardingAlert(alert: OffboardingAlert): void {
+  const alerts = getOffboardingAlerts();
+  const index = alerts.findIndex((a) => a.id === alert.id);
+  if (index !== -1) {
+    alerts[index] = alert;
+    saveOffboardingAlerts(alerts);
+  }
 }
 
 export function deleteTerminatedEmployee(id: string): void {
