@@ -6,6 +6,8 @@ import { SyncButton } from '@/components/dashboard/SyncButton';
 import { EndpointChart } from '@/components/dashboard/EndpointChart';
 import { ComparisonTable } from '@/components/dashboard/ComparisonTable';
 import { AlertsPreview } from '@/components/dashboard/AlertsPreview';
+import { ComplianceModal } from '@/components/dashboard/ComplianceModal';
+import { Button } from '@/components/ui/button';
 import {
   fetchVicariusEndpoints,
   fetchCortexEndpoints,
@@ -18,6 +20,7 @@ import {
 import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync, getTerminatedEmployees } from '@/lib/storage';
 import { ComparisonResult, SyncStatus, Alert, SyncLog } from '@/types/inventory';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -29,6 +32,7 @@ export default function Dashboard() {
   });
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [endpointCounts, setEndpointCounts] = useState({
     vicarius: 0,
     cortex: 0,
@@ -38,6 +42,9 @@ export default function Dashboard() {
   });
 
   const { toast } = useToast();
+
+  // Calculate non-compliance count
+  const nonComplianceCount = comparison?.allEndpoints.filter(e => e.sources.length < 5).length || 0;
 
   useEffect(() => {
     const savedAlerts = getAlerts();
@@ -190,10 +197,19 @@ export default function Dashboard() {
                 <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
                   CSV
                 </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-muted/30 text-muted-foreground border border-muted">
-                  MOCK
-                </span>
               </div>
+              <Button
+                onClick={() => setShowComplianceModal(true)}
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'border-destructive/30 text-destructive hover:bg-destructive/10',
+                  nonComplianceCount > 0 && 'animate-pulse'
+                )}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                {nonComplianceCount} Não Conformes
+              </Button>
               <SyncButton syncStatus={syncStatus} onSync={handleSync} />
             </div>
           </div>
@@ -270,6 +286,14 @@ export default function Dashboard() {
           <ComparisonTable endpoints={comparison.allEndpoints} title="Inventário Consolidado" />
         )}
       </div>
+
+      {/* Compliance Modal */}
+      {showComplianceModal && comparison && (
+        <ComplianceModal
+          endpoints={comparison.allEndpoints}
+          onClose={() => setShowComplianceModal(false)}
+        />
+      )}
     </MainLayout>
   );
 }

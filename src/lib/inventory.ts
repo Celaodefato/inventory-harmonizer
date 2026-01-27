@@ -31,8 +31,8 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
     const csvData = getCsvData().vicarius;
     if (csvData && csvData.length > 0) return csvData;
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockVicariusEndpoints;
+    // Return empty instead of mock data
+    return [];
   }
 
   const config = getApiConfig();
@@ -69,8 +69,7 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
     const csvData = getCsvData().cortex;
     if (csvData && csvData.length > 0) return csvData;
 
-    await new Promise(resolve => setTimeout(resolve, 600));
-    return mockCortexEndpoints;
+    return [];
   }
 
   const config = getApiConfig();
@@ -107,8 +106,7 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
     const csvData = getCsvData().warp;
     if (csvData && csvData.length > 0) return csvData;
 
-    await new Promise(resolve => setTimeout(resolve, 550));
-    return mockWarpEndpoints;
+    return [];
   }
 
   const config = getApiConfig();
@@ -145,8 +143,7 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
     const csvData = getCsvData().pam;
     if (csvData && csvData.length > 0) return csvData;
 
-    await new Promise(resolve => setTimeout(resolve, 520));
-    return mockPamEndpoints;
+    return [];
   }
 
   const config = getApiConfig();
@@ -183,8 +180,7 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
     const csvData = getCsvData().jumpcloud;
     if (csvData && csvData.length > 0) return csvData;
 
-    await new Promise(resolve => setTimeout(resolve, 580));
-    return mockJumpcloudEndpoints;
+    return [];
   }
 
   const config = getApiConfig();
