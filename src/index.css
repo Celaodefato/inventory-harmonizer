@@ -14,7 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    --primary: 210 85% 50%;
+    /* Bright cyan accent */
+    --primary: 190 100% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 15% 92%;
@@ -23,49 +24,49 @@
     --muted: 210 15% 95%;
     --muted-foreground: 215 12% 45%;
 
-    --accent: 210 85% 50%;
+    --accent: 190 100% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 355 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 160 75% 38%;
+    --success: 150 80% 45%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 45 90% 45%;
+    --warning: 35 100% 55%;
     --warning-foreground: 0 0% 10%;
 
     --border: 210 15% 88%;
     --input: 210 15% 88%;
-    --ring: 210 85% 50%;
+    --ring: 190 100% 50%;
 
     --radius: 0.5rem;
 
     --sidebar-background: 215 25% 96%;
     --sidebar-foreground: 215 20% 25%;
-    --sidebar-primary: 210 85% 50%;
+    --sidebar-primary: 190 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 15% 92%;
     --sidebar-accent-foreground: 215 25% 20%;
     --sidebar-border: 210 15% 85%;
-    --sidebar-ring: 210 85% 50%;
+    --sidebar-ring: 190 100% 50%;
   }
 
   .dark {
-    /* Deep blue-black background - SOC aesthetic */
-    --background: 218 24% 6%;
-    --foreground: 220 15% 92%;
+    /* Ultra-dark background - EXA GRC style */
+    --background: 220 30% 6%;
+    --foreground: 210 15% 95%;
 
-    /* Blue-tinted graphite cards */
-    --card: 218 22% 10%;
-    --card-foreground: 220 15% 92%;
+    /* Cards - slightly lighter than background */
+    --card: 220 28% 10%;
+    --card-foreground: 210 15% 95%;
 
-    --popover: 218 22% 10%;
-    --popover-foreground: 220 15% 92%;
+    --popover: 220 28% 10%;
+    --popover-foreground: 210 15% 95%;
 
-    /* Medium blue primary - not neon */
-    --primary: 210 85% 55%;
-    --primary-foreground: 218 24% 6%;
+    /* Bright cyan primary - EXA GRC accent */
+    --primary: 190 100% 50%;
+    --primary-foreground: 220 30% 6%;
 
     --secondary: 220 15% 18%;
     --secondary-foreground: 220 10% 90%;
@@ -73,34 +74,34 @@
     --muted: 220 15% 16%;
     --muted-foreground: 215 15% 60%;
 
-    --accent: 210 85% 55%;
-    --accent-foreground: 218 24% 6%;
+    /* Bright cyan accent */
+    --accent: 190 100% 50%;
+    --accent-foreground: 220 30% 6%;
 
-    /* Desaturated red for critical states */
-    --destructive: 355 65% 58%;
+    /* Status colors - EXA GRC vibrant */
+    --destructive: 355 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Cool green for success */
-    --success: 160 70% 45%;
+    --success: 150 80% 45%;
     --success-foreground: 0 0% 100%;
 
-    /* Softer yellow for warnings */
-    --warning: 45 85% 60%;
-    --warning-foreground: 0 0% 10%;
+    --warning: 35 100% 55%;
+    --warning-foreground: 220 30% 6%;
 
-    --border: 220 15% 20%;
-    --input: 220 15% 20%;
-    --ring: 210 85% 55%;
+    /* Subtle borders */
+    --border: 220 20% 15%;
+    --input: 220 20% 15%;
+    --ring: 190 100% 50%;
 
-    /* Sidebar - deeper for visual separation */
-    --sidebar-background: 218 28% 4%;
+    /* Ultra-dark sidebar */
+    --sidebar-background: 220 35% 4%;
     --sidebar-foreground: 220 10% 75%;
-    --sidebar-primary: 210 85% 55%;
+    --sidebar-primary: 190 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 218 22% 10%;
+    --sidebar-accent: 220 22% 10%;
     --sidebar-accent-foreground: 220 10% 95%;
-    --sidebar-border: 220 15% 12%;
-    --sidebar-ring: 210 85% 55%;
+    --sidebar-border: 220 20% 12%;
+    --sidebar-ring: 190 100% 50%;
   }
 }
 
