@@ -85,54 +85,42 @@ export function IndividualToolCard({
     return (
         <div
             className={cn(
-                'group relative rounded-2xl border-2 bg-card transition-all duration-300',
-                'hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1',
-                isConfigured && !hasChanges
-                    ? 'border-success/40 shadow-lg shadow-success/10'
-                    : hasChanges
-                        ? 'border-warning/40 shadow-lg shadow-warning/10'
-                        : 'border-border/50 hover:border-primary/30'
+                'rounded-xl border border-border bg-card overflow-hidden transition-all duration-300 animate-fade-in flex flex-col',
+                isConfigured && !hasChanges ? 'border-success/30 ring-1 ring-success/5' :
+                    hasChanges ? 'border-primary/30 ring-1 ring-primary/5 shadow-lg shadow-primary/5' :
+                        'hover:border-primary/20'
             )}
         >
-            {/* Status Indicator */}
-            {isConfigured && !hasChanges && (
-                <div className="absolute -top-3 -right-3 z-10">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-success shadow-lg">
-                        <Check className="h-4 w-4 text-success-foreground" />
-                    </div>
-                </div>
-            )}
-
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 flex-1">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={cn('flex h-14 w-14 items-center justify-center rounded-xl shadow-md', color)}>
+                        <div className={cn('flex h-12 w-12 items-center justify-center rounded-lg shadow-sm shrink-0', color)}>
                             {icon}
                         </div>
-                        <div>
-                            <h3 className="text-lg font-bold text-card-foreground">{title}</h3>
-                            <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+                        <div className="space-y-0.5">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">{title}</h3>
+                            <p className="text-xs text-muted-foreground font-medium">{description}</p>
                         </div>
                     </div>
 
                     {isConfigured && !hasChanges ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                            <span className="text-xs font-semibold text-success">Ativo</span>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-success/10 border border-success/20">
+                            <Check className="h-3 w-3 text-success" />
+                            <span className="text-[10px] font-bold text-success uppercase tracking-widest">Ativo</span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border">
-                            <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-xs font-medium text-muted-foreground">Inativo</span>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/50 border border-border">
+                            <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inativo</span>
                         </div>
                     )}
                 </div>
 
                 {/* Form Fields */}
-                <div className="space-y-4">
+                <div className="space-y-5">
                     <div className="space-y-2">
-                        <Label htmlFor={`${title}-url`} className="text-sm font-semibold">
+                        <Label htmlFor={`${title}-url`} className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
                             URL Base da API
                         </Label>
                         <Input
@@ -141,12 +129,12 @@ export function IndividualToolCard({
                             value={localBaseUrl}
                             onChange={(e) => handleUrlChange(e.target.value)}
                             className={cn(
-                                'h-11 text-sm',
+                                'h-10 text-xs bg-muted/5 border-border focus-visible:ring-primary/20',
                                 urlError && 'border-destructive focus-visible:ring-destructive'
                             )}
                         />
                         {urlError && (
-                            <p className="text-xs text-destructive flex items-center gap-1.5">
+                            <p className="text-[10px] text-destructive font-bold flex items-center gap-1.5 uppercase tracking-wide">
                                 <AlertCircle className="h-3 w-3" />
                                 {urlError}
                             </p>
@@ -154,7 +142,7 @@ export function IndividualToolCard({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor={`${title}-key`} className="text-sm font-semibold">
+                        <Label htmlFor={`${title}-key`} className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
                             {keyLabel}
                         </Label>
                         <div className="relative">
@@ -164,37 +152,39 @@ export function IndividualToolCard({
                                 placeholder={keyPlaceholder}
                                 value={localKey}
                                 onChange={(e) => handleKeyChange(e.target.value)}
-                                className="h-11 pr-11 text-sm font-mono"
+                                className="h-10 pr-10 text-xs font-mono bg-muted/5 border-border focus-visible:ring-primary/20"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowKey(!showKey)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+                                className="absolute right-0 top-0 h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                             >
-                                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                {showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                             </button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Action Button */}
+            {/* Action Footer */}
+            <div className="px-6 py-4 border-t border-border bg-muted/20">
                 <Button
                     onClick={handleSave}
                     disabled={!isComplete || isSaving || !hasChanges}
                     className={cn(
-                        'w-full h-11 font-semibold shadow-md transition-all',
-                        isComplete && hasChanges && 'shadow-primary/20 hover:shadow-lg hover:shadow-primary/30'
+                        'w-full h-10 text-[10px] font-bold uppercase tracking-widest transition-all',
+                        isComplete && hasChanges && 'shadow-lg shadow-primary/10'
                     )}
                 >
                     {isSaving ? (
                         <>
-                            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                            Salvando...
+                            <div className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                            Sincronizando...
                         </>
                     ) : (
                         <>
-                            <Save className="mr-2 h-4 w-4" />
-                            {hasChanges ? 'Salvar Alterações' : 'Salvo'}
+                            <Save className="mr-2 h-3 w-3" />
+                            {hasChanges ? 'Salvar Configuração' : 'Credencial Ativa'}
                         </>
                     )}
                 </Button>

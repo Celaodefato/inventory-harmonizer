@@ -38,3 +38,11 @@ out
 # Project specific
 .temp
 .cache
+server/dev.db
+server/dev.db-journal
+s/generated/prisma
+dev.db
+dev.db-journal
+dist
+.env
+server/.env

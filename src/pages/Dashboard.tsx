@@ -48,10 +48,13 @@ export default function Dashboard() {
   const nonComplianceCount = comparison?.nonCompliant.length || 0;
 
   useEffect(() => {
-    cleanupOrphanedOffboardingAlerts();
-    const savedAlerts = getAlerts();
-    setAlerts(savedAlerts);
-    setOffboardingAlerts(getOffboardingAlerts());
+    const loadData = async () => {
+      cleanupOrphanedOffboardingAlerts();
+      const savedAlerts = await getAlerts();
+      setAlerts(savedAlerts);
+      setOffboardingAlerts(getOffboardingAlerts());
+    };
+    loadData();
   }, []);
 
   const handleSync = useCallback(async () => {
@@ -86,9 +89,32 @@ export default function Dashboard() {
       );
       setComparison(result);
 
+      // Sync endpoints with backend
+      try {
+        const { apiClient } = await import('@/lib/api');
+        await apiClient.post('/endpoints/sync', {
+          endpoints: result.allEndpoints.map(ep => ({
+            hostname: ep.hostname,
+            user: ep.userEmail,
+            ip: ep.ip,
+            lastSeen: ep.lastSeen,
+            os: ep.os,
+            inVicarius: ep.sources.includes('vicarius'),
+            inCortex: ep.sources.includes('cortex'),
+            inWarp: ep.sources.includes('warp'),
+            inPam: ep.sources.includes('pam'),
+            inJumpCloud: ep.sources.includes('jumpcloud'),
+            isNonCompliant: result.nonCompliant.some(nc => nc.hostname === ep.hostname),
+            isTerminated: result.terminatedWithActiveEndpoints.some(t => t.hostname === ep.hostname)
+          }))
+        });
+      } catch (syncError) {
+        console.warn('Failed to sync endpoints to backend', syncError);
+      }
+
       const newAlerts = generateAlerts(result);
       setAlerts(newAlerts);
-      saveAlerts(newAlerts);
+      await saveAlerts(newAlerts);
 
       const timestamp = new Date().toISOString();
       const log: SyncLog = {
@@ -104,7 +130,7 @@ export default function Dashboard() {
           jumpcloud: jumpcloudData.length,
         },
       };
-      addSyncLog(log);
+      await addSyncLog(log);
       setLastSync(timestamp);
 
       setSyncStatus({
@@ -132,7 +158,7 @@ export default function Dashboard() {
         message: 'Erro durante sincronização',
         details: error instanceof Error ? error.message : 'Erro desconhecido',
       };
-      addSyncLog(log);
+      await addSyncLog(log);
 
       setSyncStatus({
         isLoading: false,
@@ -180,109 +206,99 @@ export default function Dashboard() {
 
   return (
     <MainLayout>
-      <div className="p-6 lg:p-8">
+      <div className="p-8 max-w-[1600px] mx-auto space-y-8">
         {/* Header */}
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground">
-              Comparação de inventário entre 5 ferramentas de segurança
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Visão Geral</h1>
+            <p className="text-sm text-muted-foreground font-medium">
+              Monitoramento consolidado de ativos e conformidade de segurança
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="text-right text-sm">
-              <p className="text-muted-foreground">Última sincronização</p>
-              <p className="font-medium text-foreground">{formatLastSync(syncStatus.lastSync)}</p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="px-4 py-2 rounded-lg border border-border bg-card flex flex-col items-end">
+              <span className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground/60">Última atualização</span>
+              <span className="text-xs font-bold text-foreground">{formatLastSync(syncStatus.lastSync)}</span>
             </div>
+
+            <div className="h-10 w-[1px] bg-border mx-2 hidden sm:block" />
+
             <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-success/10 text-success border border-success/20">
-                  API
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
-                  CSV
-                </span>
-              </div>
               <Button
                 onClick={() => setShowComplianceModal(true)}
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'border-destructive/30 text-destructive hover:bg-destructive/10',
-                  nonComplianceCount > 0 && 'animate-pulse'
+                  'h-10 border-destructive/20 bg-destructive/5 text-destructive font-bold hover:bg-destructive/10 transition-all',
+                  nonComplianceCount > 0 && 'ring-2 ring-destructive/10 ring-offset-2 ring-offset-background'
                 )}
               >
-                <AlertTriangle className="mr-2 h-4 w-4" />
-                {nonComplianceCount} Não Conformes
+                <ShieldAlert className="mr-2 h-4 w-4" />
+                {nonComplianceCount} NÃO CONFORMES
               </Button>
+
               <Button
                 onClick={() => window.location.hash = '#/alerts?tab=offboarding'}
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'border-primary/30 text-primary hover:bg-primary/10',
-                  pendingOffboardingCount > 0 && 'animate-pulse'
+                  'h-10 border-primary/20 bg-primary/5 text-primary font-bold hover:bg-primary/10 transition-all',
+                  pendingOffboardingCount > 0 && 'ring-2 ring-primary/10 ring-offset-2 ring-offset-background'
                 )}
               >
-                <ShieldAlert className="mr-2 h-4 w-4" />
-                {pendingOffboardingCount} Offboardings Pendentes
+                <UserX className="mr-2 h-4 w-4" />
+                {pendingOffboardingCount} OFFBOARDINGS
               </Button>
+
               <SyncButton syncStatus={syncStatus} onSync={handleSync} />
             </div>
           </div>
         </div>
 
-        {/* Risk Alert Banner */}
+        {/* Technical Status Banner */}
         {terminatedRiskCount > 0 && (
-          <div className="mb-6 rounded-lg border border-destructive/50 bg-destructive/10 p-4 animate-fade-in">
-            <div className="flex items-center gap-3">
-              <UserX className="h-5 w-5 text-destructive" />
-              <div>
-                <p className="font-medium text-destructive">
-                  ⚠️ Alerta de Segurança: {terminatedRiskCount} endpoint(s) de colaboradores desligados detectado(s)
-                </p>
-                <p className="text-sm text-destructive/80">
-                  Verifique a página de Alertas para mais detalhes e tome as ações necessárias
-                </p>
-              </div>
+          <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 animate-fade-in flex items-center gap-4">
+            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-destructive tracking-tight uppercase">Riscos de Segurança Detectados</p>
+              <p className="text-sm text-destructive/80 font-medium font-mono">Detectamos {terminatedRiskCount} endpoint(s) ativos vinculados a colaboradores desligados.</p>
+            </div>
+            <Button variant="outline" size="sm" className="border-destructive/30 text-destructive bg-transparent hover:bg-destructive/10 font-bold" onClick={() => window.location.hash = '#/alerts'}>
+              REVISAR AGORA
+            </Button>
           </div>
         )}
 
-        {/* Stats Grid */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {/* Primary Metrics Grid */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Total de Endpoints"
+            title="Total Monitorado"
             value={comparison?.allEndpoints.length || 0}
-            subtitle="Em todas as fontes"
-            icon={<Server className="h-5 w-5" />}
+            subtitle="Ativos únicos identificados"
+            icon={<Server className="h-4 w-4" />}
           />
           <StatCard
-            title="Divergências"
+            title="Sincronização Total"
+            value={comparison?.inAllSources.length || 0}
+            subtitle="Presentes em todas as bases"
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            variant={comparison?.inAllSources.length && comparison.inAllSources.length > 0 ? 'success' : 'default'}
+          />
+          <StatCard
+            title="Gaps de Inventário"
             value={divergencesCount}
-            subtitle="Endpoints com diferenças"
-            icon={<AlertTriangle className="h-5 w-5" />}
+            subtitle="Divergências entre ferramentas"
+            icon={<AlertTriangle className="h-4 w-4" />}
             variant={divergencesCount > 0 ? 'warning' : 'default'}
           />
           <StatCard
-            title="Sincronizados"
-            value={comparison?.inAllSources.length || 0}
-            subtitle="Presentes em todas as fontes"
-            icon={<CheckCircle2 className="h-5 w-5" />}
-            variant="success"
-          />
-          <StatCard
-            title="Risco Desligados"
-            value={terminatedRiskCount + terminatedInSystemsCount}
-            subtitle="Endpoints ou acessos ativos"
-            icon={<UserX className="h-5 w-5" />}
-            variant={terminatedRiskCount > 0 ? 'error' : 'default'}
-          />
-          <StatCard
-            title="Status"
+            title="Saúde do Sistema"
             value={syncStatus.status === 'syncing' ? 'Sincronizando' : 'Pronto'}
-            subtitle="5 fontes monitoradas"
-            icon={<Shield className="h-5 w-5" />}
+            subtitle="Conexões com 5 APIs ativas"
+            icon={<Shield className="h-4 w-4" />}
           />
         </div>
 

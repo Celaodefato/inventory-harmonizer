@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { OffboardingAlertCard } from '@/components/offboarding/OffboardingAlertCard';
 import { OffboardingDetailModal } from '@/components/offboarding/OffboardingDetailModal';
+import { StatCard } from '@/components/dashboard/StatCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const alertIcons = {
@@ -40,9 +41,9 @@ const alertStyles = {
 };
 
 const typeLabels = {
-  info: 'Informação',
-  warning: 'Atenção',
-  error: 'Crítico',
+  info: 'INFORMATIVO',
+  warning: 'ATENÇÃO',
+  error: 'CRÍTICO',
 };
 
 const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
@@ -52,8 +53,9 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
 
-  const loadAlerts = () => {
-    setAlerts(getAlerts());
+  const loadAlerts = async () => {
+    const sAlerts = await getAlerts();
+    setAlerts(sAlerts);
     setOffboardingAlerts(getOffboardingAlerts());
   };
 
@@ -61,8 +63,8 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
     loadAlerts();
   }, []);
 
-  const handleClearAlerts = () => {
-    clearAlerts();
+  const handleClearAlerts = async () => {
+    await clearAlerts();
     setAlerts([]);
     toast({
       title: 'Alertas limpos',
@@ -105,54 +107,31 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
         </div>
 
         {/* Summary Cards */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-4">
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-                <Info className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{alertCounts.info}</p>
-                <p className="text-sm text-muted-foreground">Informativos</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/20">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{alertCounts.warning}</p>
-                <p className="text-sm text-muted-foreground">Atenção</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/20">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{alertCounts.error}</p>
-                <p className="text-sm text-muted-foreground">Críticos</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-                <ShieldAlert className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{alertCounts.offboarding}</p>
-                <p className="text-sm text-muted-foreground">Offboardings TI</p>
-              </div>
-            </div>
-          </div>
+        <div className="mb-8 grid gap-6 sm:grid-cols-4">
+          <StatCard
+            title="Informativos"
+            value={alertCounts.info}
+            icon={<Info className="h-4 w-4" />}
+          />
+          <StatCard
+            title="Atenção"
+            value={alertCounts.warning}
+            icon={<AlertTriangle className="h-4 w-4" />}
+            variant={alertCounts.warning > 0 ? 'warning' : 'default'}
+          />
+          <StatCard
+            title="Críticos"
+            value={alertCounts.error}
+            icon={<AlertCircle className="h-4 w-4" />}
+            variant={alertCounts.error > 0 ? 'error' : 'default'}
+          />
+          <StatCard
+            title="Offboardings"
+            value={alertCounts.offboarding}
+            subtitle="Pendentes TI"
+            icon={<ShieldAlert className="h-4 w-4" />}
+            variant={alertCounts.offboarding > 0 ? 'warning' : 'default'}
+          />
         </div>
 
         <Tabs defaultValue="system" className="w-full">
@@ -162,13 +141,13 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
           </TabsList>
 
           <TabsContent value="system" className="mt-0">
-            <div className="rounded-xl border border-border bg-card">
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
               {alerts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <Bell className="mb-4 h-12 w-12 text-muted-foreground/30" />
-                  <h3 className="text-lg font-medium text-foreground">Nenhum alerta</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Sincronize os dados para verificar divergências
+                  <Bell className="mb-4 h-10 w-10 text-muted-foreground/20" />
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Log de alertas limpo</h3>
+                  <p className="text-xs text-muted-foreground/60 mt-2">
+                    Nenhuma divergência detectada nas fontes sincronizadas
                   </p>
                 </div>
               ) : (
@@ -179,42 +158,34 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
                     return (
                       <div
                         key={alert.id}
-                        className={cn(
-                          'flex items-start gap-4 p-4 transition-colors animate-fade-in',
-                          styles.bg
-                        )}
+                        className="group flex items-start gap-5 p-5 transition-colors hover:bg-muted/30 animate-fade-in"
                       >
                         <div
                           className={cn(
-                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-                            styles.bg
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-transparent',
+                            styles.icon
                           )}
                         >
-                          <Icon className={cn('h-5 w-5', styles.icon)} />
+                          <Icon className="h-5 w-5" />
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={cn(
-                                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                                styles.badge
-                              )}
-                            >
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className={cn('text-[10px] font-bold uppercase tracking-widest', styles.icon)}>
                               {typeLabels[alert.type]}
                             </span>
                             {alert.source && (
-                              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">
                                 {alert.source}
                               </span>
                             )}
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-tight">
                               {formatTimestamp(alert.timestamp)}
                             </span>
                           </div>
 
-                          <h4 className="mt-1 font-medium text-foreground">{alert.title}</h4>
-                          <p className="text-sm text-muted-foreground">{alert.message}</p>
+                          <h4 className="text-base font-bold text-foreground tracking-tight">{alert.title}</h4>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{alert.message}</p>
                         </div>
                       </div>
                     );

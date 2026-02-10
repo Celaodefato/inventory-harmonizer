@@ -34,24 +34,43 @@ export function isWorkstation(hostname: string): boolean {
     h.startsWith('EXA-MAC');
 }
 
-export function isEndpointCompliant(endpoint: NormalizedEndpoint): boolean {
-  const hostname = endpoint.hostname.toUpperCase();
-  const isExaArk = hostname.startsWith('EXA-ARK');
+export function getRequiredSources(hostname: string): string[] {
+  const h = hostname.toUpperCase();
+  const isExaArk = h.startsWith('EXA-ARK');
 
-  if (isWorkstation(endpoint.hostname)) {
-    // Workstations (EXA-ARK*, EXA-MAC*)
+  if (isWorkstation(hostname)) {
     if (isExaArk) {
-      // EXA-ARK machines don't need PAM (require 4 tools: Vicarius, Cortex, Warp, JumpCloud)
-      const required = ['vicarius', 'cortex', 'warp', 'jumpcloud'];
-      return required.every(s => endpoint.sources.includes(s as any));
+      return ['vicarius', 'cortex', 'warp', 'jumpcloud'];
     }
-    // Other workstations (like EXA-MAC if not starting with EXA-ARK) might still need 5
-    // But based on user request, let's assume all EXA-* workstations are 5 EXCEPT EXA-ARK*
-    return endpoint.sources.length === 5;
-  } else {
-    // Servers/Others only need Vicarius and Cortex
-    return endpoint.sources.includes('vicarius') && endpoint.sources.includes('cortex');
+    return ['vicarius', 'cortex', 'warp', 'pam', 'jumpcloud'];
   }
+  return ['vicarius', 'cortex', 'warp']; // Servers only need Vicarius, Cortex (Warp included for inventory)
+}
+
+export function isEndpointCompliant(endpoint: NormalizedEndpoint): boolean {
+  const required = getRequiredSources(endpoint.hostname);
+  return required.every(s => endpoint.sources.includes(s as any));
+}
+
+export function getEndpointRiskDetails(endpoint: NormalizedEndpoint): { level: NormalizedEndpoint['riskLevel']; reason: string | null } {
+  // Priority 1: Terminated Employee
+  if (endpoint.riskLevel === 'high') {
+    return { level: 'high', reason: endpoint.riskReason || 'Colaborador desligado com endpoint ativo' };
+  }
+
+  // Priority 2: Missing Tools
+  const required = getRequiredSources(endpoint.hostname);
+  const missing = required.filter(s => !endpoint.sources.includes(s as any));
+
+  if (missing.length > 0) {
+    const names = missing.map(s => s.charAt(0).toUpperCase() + s.slice(1));
+    return {
+      level: 'medium',
+      reason: `Gaps de Inventário: Ausente em ${names.join(', ')}`
+    };
+  }
+
+  return { level: 'none', reason: null };
 }
 
 export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
@@ -285,15 +304,23 @@ export function compareInventories(
 
   const allEndpoints = Array.from(endpointMap.values());
 
-  // Check for terminated employees with active endpoints
+  // Apply risk tagging and compliance checks
   allEndpoints.forEach(endpoint => {
+    // First check for terminated employees (manual override for high risk)
     if (endpoint.userEmail && terminatedEmails.has(endpoint.userEmail.toLowerCase())) {
       endpoint.riskLevel = 'high';
       endpoint.riskReason = 'Colaborador desligado com endpoint ativo';
     }
+
+    // Then refine with detailed risk logic
+    const { level, reason } = getEndpointRiskDetails(endpoint);
+    if (level !== 'none' && (!endpoint.riskLevel || endpoint.riskLevel === 'none' || level === 'high')) {
+      endpoint.riskLevel = level;
+      endpoint.riskReason = reason || undefined;
+    }
   });
 
-  const terminatedWithActiveEndpoints = allEndpoints.filter(e => e.riskLevel === 'high');
+  const terminatedWithActiveEndpoints = allEndpoints.filter(e => e.riskLevel === 'high' && e.userEmail && terminatedEmails.has(e.userEmail.toLowerCase()));
 
   // Find terminated employees still in JumpCloud
   const jumpcloudEmails = new Set(jumpcloudEndpoints.map(e => e.userEmail?.toLowerCase()).filter(Boolean));

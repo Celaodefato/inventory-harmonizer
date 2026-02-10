@@ -19,17 +19,17 @@ export function AppSidebar() {
       <div className="flex h-full flex-col">
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg overflow-hidden bg-white">
-            <img src="/assets/logo.png" alt="Logo" className="h-full w-full object-contain" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-md overflow-hidden bg-primary/10">
+            <Server className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-sidebar-foreground">Inventory</h1>
-            <p className="text-xs text-muted-foreground">Comparator</p>
+            <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground uppercase">Inventory</h1>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80 font-medium">Harmonizer</p>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 space-y-1 px-3 py-6">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             return (
@@ -37,13 +37,16 @@ export function AppSidebar() {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                  'group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors relative',
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-primary shadow-md shadow-primary/20'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                    ? 'bg-primary/5 text-primary'
+                    : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 )}
               >
-                <item.icon className={cn('h-5 w-5', isActive && 'text-primary')} />
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-primary rounded-r-full" />
+                )}
+                <item.icon className={cn('h-4 w-4 transition-colors', isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-sidebar-foreground')} />
                 {item.name}
               </NavLink>
             );
@@ -51,17 +54,21 @@ export function AppSidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-sidebar-border p-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="flex-1 rounded-lg bg-sidebar-accent/50 p-3">
-              <p className="text-xs text-muted-foreground">
-                5 fontes configuradas
-              </p>
-              <p className="mt-1 text-xs text-primary">
-                Vicarius • Cortex • Warp • PAM • JumpCloud
+        <div className="mt-auto border-t border-sidebar-border p-4 bg-sidebar-background/50">
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg border border-sidebar-border bg-sidebar-background p-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monitorando</span>
+                <div className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+              </div>
+              <p className="text-xs font-medium text-sidebar-foreground">
+                5 Fontes Ativas
               </p>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">Tema</span>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </div>

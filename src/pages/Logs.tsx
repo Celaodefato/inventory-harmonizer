@@ -29,8 +29,11 @@ const LogsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const [logs, setLogs] = useState<SyncLog[]>([]);
 
   useEffect(() => {
-    const savedLogs = getSyncLogs();
-    setLogs(savedLogs);
+    const loadLogs = async () => {
+      const savedLogs = await getSyncLogs();
+      setLogs(savedLogs);
+    };
+    loadLogs();
   }, []);
 
   const formatTimestamp = (timestamp: string) => {

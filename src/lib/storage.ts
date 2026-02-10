@@ -1,4 +1,5 @@
 import { ApiConfig, SyncLog, Alert, TerminatedEmployee, OffboardingAlert } from '@/types/inventory';
+import { apiClient } from './api';
 
 const STORAGE_KEYS = {
   API_CONFIG: 'inventory_api_config',
@@ -48,54 +49,87 @@ export function saveApiConfig(config: ApiConfig): void {
   }
 }
 
-export function getSyncLogs(): SyncLog[] {
+export async function getSyncLogs(): Promise<SyncLog[]> {
   try {
+    // Try backend first
+    try {
+      return await apiClient.get('/logs');
+    } catch (apiError) {
+      console.warn('Backend logs unreachable, falling back to localStorage');
+    }
+
     const stored = localStorage.getItem(STORAGE_KEYS.SYNC_LOGS);
     if (stored) {
       return JSON.parse(stored);
     }
   } catch (error) {
-    console.error('Error reading sync logs from localStorage:', error);
+    console.error('Error reading sync logs:', error);
   }
   return [];
 }
 
-export function addSyncLog(log: SyncLog): void {
+export async function addSyncLog(log: SyncLog): Promise<void> {
   try {
-    const logs = getSyncLogs();
+    // Save to backend
+    try {
+      await apiClient.post('/logs', log);
+    } catch (apiError) {
+      console.warn('Failed to save log to backend');
+    }
+
+    const logs = JSON.parse(localStorage.getItem(STORAGE_KEYS.SYNC_LOGS) || '[]');
     logs.unshift(log);
     const trimmedLogs = logs.slice(0, 100);
     localStorage.setItem(STORAGE_KEYS.SYNC_LOGS, JSON.stringify(trimmedLogs));
   } catch (error) {
-    console.error('Error saving sync log to localStorage:', error);
+    console.error('Error saving sync log:', error);
   }
 }
 
-export function getAlerts(): Alert[] {
+export async function getAlerts(): Promise<Alert[]> {
   try {
+    // Try backend first
+    try {
+      return await apiClient.get('/alerts');
+    } catch (apiError) {
+      console.warn('Backend alerts unreachable, falling back to localStorage');
+    }
+
     const stored = localStorage.getItem(STORAGE_KEYS.ALERTS);
     if (stored) {
       return JSON.parse(stored);
     }
   } catch (error) {
-    console.error('Error reading alerts from localStorage:', error);
+    console.error('Error reading alerts:', error);
   }
   return [];
 }
 
-export function saveAlerts(alerts: Alert[]): void {
+export async function saveAlerts(alerts: Alert[]): Promise<void> {
   try {
+    // We only save new alerts to the backend individually in practice, 
+    // but for compatibility with existing code that saves the whole list:
+    for (const alert of alerts) {
+      // In v2.0, we might want a bulk endpoint, but for now:
+      try {
+        await apiClient.post('/alerts', alert);
+      } catch (e) { }
+    }
+
     localStorage.setItem(STORAGE_KEYS.ALERTS, JSON.stringify(alerts));
   } catch (error) {
-    console.error('Error saving alerts to localStorage:', error);
+    console.error('Error saving alerts:', error);
   }
 }
 
-export function clearAlerts(): void {
+export async function clearAlerts(): Promise<void> {
   try {
+    try {
+      await apiClient.delete('/alerts');
+    } catch (e) { }
     localStorage.removeItem(STORAGE_KEYS.ALERTS);
   } catch (error) {
-    console.error('Error clearing alerts from localStorage:', error);
+    console.error('Error clearing alerts:', error);
   }
 }
 
