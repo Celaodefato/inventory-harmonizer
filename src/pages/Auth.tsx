@@ -5,19 +5,20 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Shield, Info } from 'lucide-react';
 
 export default function Auth() {
+    const [loading, setLoading] = useState(false);
+    const [isRegistering, setIsRegistering] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setErrorMsg(null);
 
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
+        const { error } = isRegistering
+            ? await supabase.auth.signUp({ email, password })
+            : await supabase.auth.signInWithPassword({ email, password });
 
         if (error) {
             setErrorMsg(error.message);
