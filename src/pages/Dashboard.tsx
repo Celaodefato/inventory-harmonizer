@@ -17,7 +17,17 @@ import {
   compareInventories,
   generateAlerts,
 } from '@/lib/inventory';
-import { addSyncLog, getAlerts, saveAlerts, setLastSync, getLastSync, getTerminatedEmployees, getOffboardingAlerts, cleanupOrphanedOffboardingAlerts } from '@/lib/storage';
+import {
+  getLastSync,
+  setLastSync,
+  getAlerts,
+  saveAlerts,
+  clearAlerts,
+  getOffboardingAlerts,
+  getTerminatedEmployees,
+  cleanupOrphanedOffboardingAlerts
+} from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import { ComparisonResult, SyncStatus, Alert, SyncLog, OffboardingAlert } from '@/types/inventory';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -58,6 +68,42 @@ export default function Dashboard() {
       setSyncStatus(prev => ({ ...prev, lastSync }));
     };
     loadData();
+
+    // Realtime Subscriptions
+    const channel = supabase
+      .channel('dashboard-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'alerts' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setAlerts((prev) => [payload.new as Alert, ...prev]);
+          } else if (payload.eventType === 'DELETE') {
+            // Handle delete if needed, usually full refresh or filter
+            getAlerts().then(setAlerts);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'offboarding_alerts' },
+        (payload) => {
+          getOffboardingAlerts().then(setOffboardingAlerts);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'sync_logs' },
+        (payload) => {
+          const newLog = payload.new as any;
+          setSyncStatus(prev => ({ ...prev, lastSync: newLog.timestamp }));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleSync = useCallback(async () => {

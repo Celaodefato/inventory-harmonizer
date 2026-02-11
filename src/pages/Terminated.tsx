@@ -20,6 +20,7 @@ import {
   deleteTerminatedEmployee,
   updateTerminatedEmployee,
 } from '@/lib/storage';
+import { supabase } from '@/lib/supabase';
 import { TerminatedEmployee } from '@/types/inventory';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -43,6 +44,21 @@ export default function TerminatedPage() {
 
   useEffect(() => {
     loadEmployees();
+
+    const channel = supabase
+      .channel('terminated-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'terminated_employees' },
+        () => {
+          loadEmployees();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadEmployees = async () => {
