@@ -1,7 +1,8 @@
-import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX, LogOut } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { supabase } from '@/lib/supabase';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -13,6 +14,12 @@ const navigation = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border">
@@ -69,6 +76,14 @@ export function AppSidebar() {
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">Tema</span>
               <ThemeToggle />
             </div>
+
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors group"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sair do Sistema</span>
+            </button>
           </div>
         </div>
       </div>
