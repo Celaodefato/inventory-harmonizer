@@ -27,7 +27,7 @@ import { ptBR } from 'date-fns/locale';
 export default function Dashboard() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     isLoading: false,
-    lastSync: getLastSync(),
+    lastSync: null,
     status: 'idle',
   });
   const [comparison, setComparison] = useState<ComparisonResult | null>(null);
@@ -49,10 +49,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     const loadData = async () => {
-      cleanupOrphanedOffboardingAlerts();
+      await cleanupOrphanedOffboardingAlerts();
       const savedAlerts = await getAlerts();
       setAlerts(savedAlerts);
-      setOffboardingAlerts(getOffboardingAlerts());
+      const savedOffboarding = await getOffboardingAlerts();
+      setOffboardingAlerts(savedOffboarding);
+      const lastSync = await getLastSync();
+      setSyncStatus(prev => ({ ...prev, lastSync }));
     };
     loadData();
   }, []);
@@ -61,7 +64,7 @@ export default function Dashboard() {
     setSyncStatus({ isLoading: true, lastSync: syncStatus.lastSync, status: 'syncing' });
 
     try {
-      const terminatedEmployees = getTerminatedEmployees();
+      const terminatedEmployees = await getTerminatedEmployees();
 
       const [vicariusData, cortexData, warpData, pamData, jumpcloudData] = await Promise.all([
         fetchVicariusEndpoints(),

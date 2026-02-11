@@ -6,7 +6,17 @@ import {
   mockPamEndpoints,
   mockJumpcloudEndpoints
 } from '@/data/mockData';
-import { getApiConfig, isApiConfigured, getTerminatedEmployees, getCsvData } from './storage';
+import { getApiConfig, getTerminatedEmployees, getCsvData } from './storage';
+
+// Helper to check config async
+async function isApiConfiguredAsync(tool: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud'): Promise<boolean> {
+  const config = await getApiConfig();
+  if (tool === 'vicarius') return !!(config.vicarius.baseUrl && config.vicarius.apiKey);
+  if (tool === 'cortex') return !!(config.cortex.baseUrl && config.cortex.apiToken);
+  if (tool === 'warp') return !!(config.warp.baseUrl && config.warp.apiToken);
+  if (tool === 'pam') return !!(config.pam.baseUrl && config.pam.apiToken);
+  return !!(config.jumpcloud.baseUrl && config.jumpcloud.apiToken);
+}
 
 function normalizeHostname(hostname: string): string {
   return hostname.toLowerCase().trim();
@@ -74,7 +84,8 @@ export function getEndpointRiskDetails(endpoint: NormalizedEndpoint): { level: N
 }
 
 export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
-  if (!isApiConfigured('vicarius')) {
+  const configured = await isApiConfiguredAsync('vicarius');
+  if (!configured) {
     const csvData = getCsvData().vicarius;
     if (csvData && csvData.length > 0) return csvData;
 
@@ -82,7 +93,7 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
     return [];
   }
 
-  const config = getApiConfig();
+  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.vicarius.baseUrl}/api/endpoints`, {
       headers: {
@@ -112,14 +123,15 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
 }
 
 export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
-  if (!isApiConfigured('cortex')) {
+  const configured = await isApiConfiguredAsync('cortex');
+  if (!configured) {
     const csvData = getCsvData().cortex;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];
   }
 
-  const config = getApiConfig();
+  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.cortex.baseUrl}/api/v1/endpoints`, {
       headers: {
@@ -149,14 +161,15 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
 }
 
 export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
-  if (!isApiConfigured('warp')) {
+  const configured = await isApiConfiguredAsync('warp');
+  if (!configured) {
     const csvData = getCsvData().warp;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];
   }
 
-  const config = getApiConfig();
+  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.warp.baseUrl}/v1/devices`, {
       headers: {
@@ -186,14 +199,15 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
 }
 
 export async function fetchPamEndpoints(): Promise<Endpoint[]> {
-  if (!isApiConfigured('pam')) {
+  const configured = await isApiConfiguredAsync('pam');
+  if (!configured) {
     const csvData = getCsvData().pam;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];
   }
 
-  const config = getApiConfig();
+  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.pam.baseUrl}/api/assets`, {
       headers: {
@@ -223,14 +237,15 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
 }
 
 export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
-  if (!isApiConfigured('jumpcloud')) {
+  const configured = await isApiConfiguredAsync('jumpcloud');
+  if (!configured) {
     const csvData = getCsvData().jumpcloud;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];
   }
 
-  const config = getApiConfig();
+  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.jumpcloud.baseUrl}/api/systems`, {
       headers: {

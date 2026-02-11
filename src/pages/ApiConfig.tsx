@@ -28,9 +28,12 @@ export default function ApiConfigPage() {
   };
 
   useEffect(() => {
-    const saved = getApiConfig();
-    setConfig(saved);
-    refreshMetadata();
+    const loadData = async () => {
+      const saved = await getApiConfig();
+      setConfig(saved);
+      refreshMetadata();
+    };
+    loadData();
   }, []);
 
   const createSaveHandler = (tool: keyof ApiConfig, keyType: 'apiKey' | 'apiToken') => {
@@ -40,7 +43,7 @@ export default function ApiConfigPage() {
         [tool]: { baseUrl, [keyType]: key },
       };
       setConfig(updated);
-      saveApiConfig(updated);
+      await saveApiConfig(updated);
       // Simulate network delay
       await new Promise((resolve) => setTimeout(resolve, 800));
     };

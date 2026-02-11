@@ -45,8 +45,8 @@ export default function TerminatedPage() {
     loadEmployees();
   }, []);
 
-  const loadEmployees = () => {
-    const saved = getTerminatedEmployees();
+  const loadEmployees = async () => {
+    const saved = await getTerminatedEmployees();
     setEmployees(saved);
   };
 
@@ -61,7 +61,7 @@ export default function TerminatedPage() {
       setFormData({
         name: employee.name,
         email: employee.email,
-        terminationDate: employee.terminationDate,
+        terminationDate: employee.terminationDate ? new Date(employee.terminationDate).toISOString().split('T')[0] : '',
         notes: employee.notes || '',
       });
     } else {
@@ -75,7 +75,7 @@ export default function TerminatedPage() {
     resetForm();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const sanitizedName = sanitizeInput(formData.name);
     const sanitizedEmail = sanitizeInput(formData.email);
     const sanitizedNotes = sanitizeInput(formData.notes);
@@ -106,7 +106,7 @@ export default function TerminatedPage() {
         terminationDate: formData.terminationDate,
         notes: sanitizedNotes,
       };
-      updateTerminatedEmployee(updated);
+      await updateTerminatedEmployee(updated);
       toast({ title: 'Registro atualizado', description: 'Colaborador desligado atualizado com sucesso' });
     } else {
       const newEmployee: TerminatedEmployee = {
@@ -117,17 +117,17 @@ export default function TerminatedPage() {
         notes: sanitizedNotes,
         createdAt: new Date().toISOString(),
       };
-      addTerminatedEmployee(newEmployee);
+      await addTerminatedEmployee(newEmployee);
       toast({ title: 'Registro adicionado', description: 'Colaborador desligado cadastrado com sucesso' });
     }
 
-    loadEmployees();
+    await loadEmployees();
     handleCloseDialog();
   };
 
-  const handleDelete = (id: string) => {
-    deleteTerminatedEmployee(id);
-    loadEmployees();
+  const handleDelete = async (id: string) => {
+    await deleteTerminatedEmployee(id);
+    await loadEmployees();
     toast({ title: 'Registro removido', description: 'Colaborador removido da lista' });
   };
 
@@ -232,8 +232,8 @@ export default function TerminatedPage() {
         {/* Info Banner */}
         <div className="mb-6 rounded-lg border border-warning/30 bg-warning/5 p-4">
           <p className="text-sm text-foreground">
-            <strong>Importante:</strong> Colaboradores cadastrados aqui serão cruzados automaticamente 
-            com os inventários durante a sincronização. Endpoints ou acessos ativos de desligados 
+            <strong>Importante:</strong> Colaboradores cadastrados aqui serão cruzados automaticamente
+            com os inventários durante a sincronização. Endpoints ou acessos ativos de desligados
             gerarão alertas de segurança.
           </p>
         </div>
