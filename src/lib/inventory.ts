@@ -329,6 +329,18 @@ export function compareInventories(
   pamEndpoints.forEach(item => mergeEndpoint(item, 'pam'));
   jumpcloudEndpoints.forEach(item => mergeEndpoint(item, 'jumpcloud')); // JC Devices
 
+  const csvData = getCsvData();
+  const jcUsers = csvData.jumpcloud_users || [];
+
+  // Process Active JC Users as "JumpCloud" source presence if hostname is valid
+  jcUsers.forEach(item => {
+    const status = (item.status || '').toUpperCase();
+    // Check for valid status and hostname
+    if (item.hostname && (status === 'ACTIVATED' || status === 'TRUE' || status === 'ACTIVE')) {
+      mergeEndpoint(item, 'jumpcloud');
+    }
+  });
+
   const allEndpoints = Array.from(endpointMap.values());
 
   // --- Compliance Rules for Devices ---
@@ -356,34 +368,26 @@ export function compareInventories(
     }
   });
 
-  // --- User Compliance (Separate Stream - JumpCloud Users vs Warp Users??) ---
-  // If Warp now has Hostnames, we can check Device Compliance for Workstations.
-  // Workstations should have Warp.
+  // Rule 2: Workstation Compliance (Warp + JumpCloud)
+  // Workstations must have Warp
+  // We check 'jumpcloud' source presence too, which covers both Devices and Active Users now.
+  allEndpoints.forEach(ep => {
+    if (!isServer(ep.hostname)) {
+      const hasWarp = ep.sources.includes('warp');
 
-  // Rule 2: JumpCloud Users must be in Warp (Legacy User Check)
-  // We keep this check because it tracks *People*, separate from *Machines*.
-  // Even if Warp CSV has Hostnames, it likely still has User Email.
-  const csvData = getCsvData();
-  const jcUsers = csvData.jumpcloud_users || [];
-  const warpUsers = csvData.warp || [];
-  const warpEmails = new Set(warpUsers.map(u => u.userEmail?.toLowerCase()).filter(Boolean));
-  const userViolations: any[] = [];
-
-  jcUsers.forEach(jcUser => {
-    const email = jcUser.userEmail;
-    const status = jcUser.status; // 'ACTIVATED'
-
-    if (email && status === 'ACTIVATED') {
-      const inWarp = warpEmails.has(email.toLowerCase());
-      if (!inWarp) {
-        userViolations.push({
-          userEmail: email,
-          riskReason: 'Usuário JumpCloud Ativo sem Warp',
-          sources: ['jumpcloud_users'], // Meta info
-        });
+      if (!hasWarp) {
+        ep.riskLevel = 'medium';
+        ep.riskReason = (ep.riskReason ? ep.riskReason + '; ' : '') + 'Ausente no Warp';
+        if (!nonCompliant.includes(ep)) nonCompliant.push(ep);
       }
     }
   });
+
+  // Legacy variables for return
+  const terminatedWithActiveEndpoints: NormalizedEndpoint[] = [];
+  const terminatedInJumpcloud: TerminatedEmployee[] = [];
+  const terminatedInPam: TerminatedEmployee[] = [];
+  const userViolations: any[] = []; // Empty as we integrated logic
 
   // Terminated Employees Logic
   const terminatedWithActiveEndpoints: NormalizedEndpoint[] = [];
