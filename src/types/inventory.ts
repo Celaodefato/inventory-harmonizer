@@ -90,6 +90,7 @@ export interface Alert {
   message: string;
   timestamp: string;
   source?: string;
+  details?: string;
 }
 
 export interface SyncStatus {

@@ -249,7 +249,7 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
   try {
     const response = await fetch(`${config.jumpcloud.baseUrl}/api/systems`, {
       headers: {
-        'x-api-key': config.jumpcloud.apiKey,
+        'x-api-key': config.jumpcloud.apiToken,
         'Content-Type': 'application/json',
       },
     });
@@ -419,6 +419,7 @@ export function generateAlerts(comparison: ComparisonResult): Alert[] {
       alerts.push({
         id: `alert-user-compliance-${violation.userEmail}`,
         type: 'warning',
+        title: 'Conformidade de Usuário',
         message: `Usuário JumpCloud sem Warp: ${violation.userEmail}`,
         timestamp,
         source: 'jumpcloud_users',
