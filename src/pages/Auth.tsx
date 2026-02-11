@@ -6,19 +6,19 @@ import { Shield, Info } from 'lucide-react';
 
 export default function Auth() {
     const [loading, setLoading] = useState(false);
-    const [isRegistering, setIsRegistering] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    const handleAuth = async (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setErrorMsg(null);
 
-        const { error } = isRegistering
-            ? await supabase.auth.signUp({ email, password })
-            : await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
 
         if (error) {
             setErrorMsg(error.message);
@@ -44,13 +44,11 @@ export default function Auth() {
                     <div className="rounded-lg bg-muted/30 p-4 border border-border flex gap-3">
                         <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                         <p className="text-sm text-muted-foreground leading-relaxed">
-                            {isRegistering
-                                ? "Crie uma nova conta administrativa para gerenciar os ativos."
-                                : "Acesso Restrito. Entre com suas credenciais corporativas."}
+                            Acesso Restrito. Entre com suas credenciais corporativas fornecidas pelo administrador.
                         </p>
                     </div>
 
-                    <form onSubmit={handleAuth} className="space-y-4">
+                    <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium leading-none" htmlFor="email">E-mail</label>
                             <input
@@ -86,21 +84,8 @@ export default function Auth() {
                             className="w-full h-12 text-lg font-bold bg-primary hover:bg-primary/90 text-primary-foreground transition-all"
                             disabled={loading}
                         >
-                            {loading ? 'Processando...' : (isRegistering ? 'Criar Conta' : 'Entrar no Sistema')}
+                            {loading ? 'Validando...' : 'Entrar no Sistema'}
                         </Button>
-
-                        <div className="text-center mt-4">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setIsRegistering(!isRegistering);
-                                    setErrorMsg(null);
-                                }}
-                                className="text-sm text-primary hover:underline"
-                            >
-                                {isRegistering ? 'Já possui conta? Entre aqui' : 'Não tem conta? Cadastre-se'}
-                            </button>
-                        </div>
                     </form>
                 </CardContent>
                 <CardFooter className="flex justify-center border-t border-border mt-2 pt-6">
