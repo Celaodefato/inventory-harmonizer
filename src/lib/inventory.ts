@@ -371,6 +371,10 @@ export function compareInventories(
   // Rule 2: Workstation Compliance (Warp + JumpCloud)
   // Workstations must have Warp
   // We check 'jumpcloud' source presence too, which covers both Devices and Active Users now.
+  // Rule 2: Workstation Compliance (Warp + JumpCloud)
+  // Workstations must have Warp
+  const userViolations: any[] = []; // Restore this to populate Alerts
+
   allEndpoints.forEach(ep => {
     if (!isServer(ep.hostname)) {
       const hasWarp = ep.sources.includes('warp');
@@ -379,6 +383,13 @@ export function compareInventories(
         ep.riskLevel = 'medium';
         ep.riskReason = (ep.riskReason ? ep.riskReason + '; ' : '') + 'Ausente no Warp';
         if (!nonCompliant.includes(ep)) nonCompliant.push(ep);
+
+        // Also add to userViolations for Alerts
+        userViolations.push({
+          userEmail: ep.userEmail || ep.hostname, // Use hostname if email missing
+          riskReason: 'Workstation Ativa sem Warp',
+          sources: ep.sources
+        });
       }
     }
   });
