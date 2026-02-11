@@ -46,20 +46,33 @@ const AppRoutes = () => (
   </Routes>
 );
 
-const App = () => (
-  <ThemeProvider>
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </AuthProvider>
-  </ThemeProvider>
-);
+import SetupRequired from "./pages/SetupRequired";
+import { isSupabaseConfigured } from "@/lib/supabase";
+
+const App = () => {
+  if (!isSupabaseConfigured) {
+    return (
+      <ThemeProvider>
+        <SetupRequired />
+      </ThemeProvider>
+    );
+  }
+
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+};
 
 export default App;
