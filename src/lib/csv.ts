@@ -71,48 +71,53 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
         };
 
         try {
+            // Priority: Explicit "HOSTNAME" column (Case Insensitive from headers)
+            const hostname = getValue(row, headers, 'hostname');
+            if (hostname) {
+                item.hostname = hostname;
+            }
+
             if (detectedType === 'cortex') {
                 // Cortex Mapping
-                // Headers: Endpoint Status, Last Seen, Endpoint Name, Endpoint Type, Operating System, Agent Version, IP Address
-                item.hostname = getValue(row, headers, 'endpoint name');
+                if (!item.hostname) item.hostname = getValue(row, headers, 'endpoint name');
                 item.ip = getValue(row, headers, 'ip address');
                 item.os = getValue(row, headers, 'operating system');
                 item.lastSeen = getValue(row, headers, 'last seen') || now;
 
             } else if (detectedType === 'vicarius') {
                 // Vicarius Mapping
-                // Headers: Name, IP Address, Operating System, Last Contacted Version? No "Last Contacted"
-                item.hostname = getValue(row, headers, 'name');
+                if (!item.hostname) item.hostname = getValue(row, headers, 'name');
                 item.ip = getValue(row, headers, 'internal ip address') || getValue(row, headers, 'external ip address');
                 item.os = getValue(row, headers, 'operating system');
-                // Vicarius date might need parsing
 
             } else if (detectedType === 'warp') {
-                // Warp Mapping (Users)
-                // Headers: Name, Email, Active Device Count
-                // Warp CSV is User-centric. We map Email to userEmail. 
-                // For Hostname, we might not have one, or use Name.
-                // Requirement: Users in JC must be in Warp.
+                // Warp Mapping
+                if (!item.hostname) {
+                    // If no hostname column, try to see if Email acts as ID? 
+                    // User said explicitly they added HOSTNAME column.
+                    // Fallback to email if missing, but it might break "Hostname" view.
+                    // Let's stick to standard behavior: if no hostname, it might be skipeed or use Email as fallback logic?
+                    // Previous logic used email. Let's keep email as metadata.
+                }
                 item.userEmail = getValue(row, headers, 'email');
-                item.hostname = item.userEmail; // Temporary: Use email as ID for User-only lists
                 item.deviceCount = getValue(row, headers, 'active device count');
 
             } else if (detectedType === 'jumpcloud') {
                 // JC Devices
-                // Headers: displayName, osFamily, lastContact
-                item.hostname = getValue(row, headers, 'displayname');
+                if (!item.hostname) item.hostname = getValue(row, headers, 'displayname');
                 item.os = getValue(row, headers, 'osfamily') + ' ' + getValue(row, headers, 'os');
                 item.lastSeen = getValue(row, headers, 'lastcontact') || now;
 
             } else if (detectedType === 'jumpcloud_users') {
                 // JC Users
-                // Headers: email, state
+                // If they added Hostname to Users CSV, we use it. 
+                // If not, we keep behavior of using email? 
+                // User said "Hostname em todos os arquivos".
                 item.userEmail = getValue(row, headers, 'email');
-                item.hostname = item.userEmail; // Use email as ID
                 item.status = getValue(row, headers, 'state');
             } else {
                 // Fallback (Generic)
-                item.hostname = getValue(row, headers, 'hostname');
+                if (!item.hostname) item.hostname = getValue(row, headers, 'hostname'); // Should be covered by priority check
                 item.ip = getValue(row, headers, 'ip');
             }
 

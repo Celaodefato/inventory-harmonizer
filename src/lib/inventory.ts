@@ -285,11 +285,11 @@ export function compareInventories(
   const endpointMap = new Map<string, NormalizedEndpoint>();
 
   // Helper to merge/add endpoint
-  const mergeEndpoint = (sourceItem: any, sourceName: 'vicarius' | 'cortex' | 'pam' | 'jumpcloud') => {
+  const mergeEndpoint = (sourceItem: any, sourceName: 'vicarius' | 'cortex' | 'pam' | 'jumpcloud' | 'warp') => {
     if (!sourceItem.hostname) return;
     const normalizedHost = normalizeHostname(sourceItem.hostname);
 
-    // Skip emails acting as hostnames (just in case)
+    // Skip emails acting as hostnames (just in case they slipped through)
     if (normalizedHost.includes('@')) return;
 
     if (!endpointMap.has(normalizedHost)) {
@@ -306,8 +306,8 @@ export function compareInventories(
       });
     } else {
       const existing = endpointMap.get(normalizedHost)!;
-      if (!existing.sources.includes(sourceName)) {
-        existing.sources.push(sourceName);
+      if (!existing.sources.includes(sourceName as any)) {
+        existing.sources.push(sourceName as any);
         existing.sourceOrigins[sourceName] = sourceItem.origin || 'api';
       }
       // Update metadata if missing
@@ -322,9 +322,10 @@ export function compareInventories(
     }
   };
 
-  // Process DEVICE sources only
+  // Process DEVICE sources (now including Warp since it has Hostname)
   vicariusEndpoints.forEach(item => mergeEndpoint(item, 'vicarius'));
   cortexEndpoints.forEach(item => mergeEndpoint(item, 'cortex'));
+  warpEndpoints.forEach(item => mergeEndpoint(item, 'warp'));
   pamEndpoints.forEach(item => mergeEndpoint(item, 'pam'));
   jumpcloudEndpoints.forEach(item => mergeEndpoint(item, 'jumpcloud')); // JC Devices
 
@@ -355,8 +356,13 @@ export function compareInventories(
     }
   });
 
-  // --- User Compliance (Separate Stream) ---
-  // Rule 2: JumpCloud Users must be in Warp
+  // --- User Compliance (Separate Stream - JumpCloud Users vs Warp Users??) ---
+  // If Warp now has Hostnames, we can check Device Compliance for Workstations.
+  // Workstations should have Warp.
+
+  // Rule 2: JumpCloud Users must be in Warp (Legacy User Check)
+  // We keep this check because it tracks *People*, separate from *Machines*.
+  // Even if Warp CSV has Hostnames, it likely still has User Email.
   const csvData = getCsvData();
   const jcUsers = csvData.jumpcloud_users || [];
   const warpUsers = csvData.warp || [];
@@ -388,17 +394,18 @@ export function compareInventories(
     allEndpoints,
     onlyVicarius: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('vicarius')),
     onlyCortex: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('cortex')),
-    onlyWarp: [], // Warp is now User-only, not an Endpoint source
+    onlyWarp: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('warp')),
     onlyPam: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('pam')),
     onlyJumpcloud: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('jumpcloud')),
     inAllSources: allEndpoints.filter(e =>
       e.sources.includes('vicarius') &&
       e.sources.includes('cortex') &&
-      e.sources.includes('jumpcloud') // We only care about device sources for "All Sources"
+      e.sources.includes('warp') && // Warp back in
+      e.sources.includes('jumpcloud')
     ),
     missingFromVicarius: allEndpoints.filter(e => !e.sources.includes('vicarius') && !isServer(e.hostname)),
     missingFromCortex: allEndpoints.filter(e => !e.sources.includes('cortex')),
-    missingFromWarp: [], // N/A for Devices
+    missingFromWarp: allEndpoints.filter(e => !isServer(e.hostname) && !e.sources.includes('warp')), // Workstations need Warp
     missingFromPam: allEndpoints.filter(e => !e.sources.includes('pam') && isServer(e.hostname)),
     missingFromJumpcloud: allEndpoints.filter(e => !e.sources.includes('jumpcloud')),
     terminatedWithActiveEndpoints,
