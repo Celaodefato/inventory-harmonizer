@@ -10,27 +10,55 @@ import Terminated from "./pages/Terminated";
 import Logs from "./pages/Logs";
 import Alerts from "./pages/Alerts";
 import NotFound from "./pages/NotFound";
+import { AuthProvider, useAuth } from "@/components/auth/AuthProvider";
+import { Navigate } from "react-router-dom";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const AppRoutes = () => (
+  <Routes>
+    <Route path="/auth" element={<Auth />} />
+    <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+    <Route path="/api-config" element={<ProtectedRoute><ApiConfig /></ProtectedRoute>} />
+    <Route path="/terminated" element={<ProtectedRoute><Terminated /></ProtectedRoute>} />
+    <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
+    <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
+    <Route path="*" element={<NotFound />} />
+  </Routes>
+);
+
 const App = () => (
   <ThemeProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/api-config" element={<ApiConfig />} />
-            <Route path="/terminated" element={<Terminated />} />
-            <Route path="/logs" element={<Logs />} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AuthProvider>
   </ThemeProvider>
 );
 

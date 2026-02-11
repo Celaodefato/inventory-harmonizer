@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { authMiddleware } from './middleware/auth';
 
 dotenv.config();
 
@@ -12,10 +13,13 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Basic health check
+// Basic health check (Public)
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date(), message: 'Harmonizer API v2.0' });
 });
+
+// Protect all other routes
+app.use('/api', authMiddleware);
 
 // Endpoints API
 app.get('/api/endpoints', async (req, res) => {
