@@ -3,12 +3,14 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Shield, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const navigate = useNavigate();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,6 +25,9 @@ export default function Auth() {
         if (error) {
             setErrorMsg(error.message);
             setLoading(false);
+        } else {
+            // Force redirect on success
+            navigate('/');
         }
     };
 
