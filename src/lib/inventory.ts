@@ -383,12 +383,6 @@ export function compareInventories(
     }
   });
 
-  // Legacy variables for return
-  const terminatedWithActiveEndpoints: NormalizedEndpoint[] = [];
-  const terminatedInJumpcloud: TerminatedEmployee[] = [];
-  const terminatedInPam: TerminatedEmployee[] = [];
-  const userViolations: any[] = []; // Empty as we integrated logic
-
   // Terminated Employees Logic
   const terminatedWithActiveEndpoints: NormalizedEndpoint[] = [];
   const terminatedInJumpcloud: TerminatedEmployee[] = [];
