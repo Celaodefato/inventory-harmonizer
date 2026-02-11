@@ -9,6 +9,7 @@ import ApiConfig from "./pages/ApiConfig";
 import Terminated from "./pages/Terminated";
 import Logs from "./pages/Logs";
 import Alerts from "./pages/Alerts";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/components/auth/AuthProvider";
 import { Navigate } from "react-router-dom";
@@ -42,6 +43,7 @@ const AppRoutes = () => (
     <Route path="/terminated" element={<ProtectedRoute><Terminated /></ProtectedRoute>} />
     <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
     <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
+    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

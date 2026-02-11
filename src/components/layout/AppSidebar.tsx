@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX, LogOut } from 'lucide-react';
+import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX, LogOut, User } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -76,6 +76,19 @@ export function AppSidebar() {
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest px-1">Tema</span>
               <ThemeToggle />
             </div>
+
+            <NavLink
+              to="/profile"
+              className={({ isActive }) => cn(
+                'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors group',
+                isActive
+                  ? 'bg-primary/5 text-primary'
+                  : 'text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground'
+              )}
+            >
+              <User className="h-4 w-4" />
+              <span>Meu Perfil</span>
+            </NavLink>
 
             <button
               onClick={handleLogout}
