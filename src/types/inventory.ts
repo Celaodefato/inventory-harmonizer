@@ -42,6 +42,7 @@ export interface ComparisonResult {
   terminatedInJumpcloud: TerminatedEmployee[];
   terminatedInPam: TerminatedEmployee[];
   nonCompliant: NormalizedEndpoint[];
+  userViolations: any[]; // List of user compliance issues
 }
 
 export interface ApiConfig {

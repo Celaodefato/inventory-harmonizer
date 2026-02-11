@@ -26,24 +26,29 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
     const rawHeaders = lines[0].split(',').map(clean);
     const headers = rawHeaders.map(h => h.toLowerCase());
 
-    // Auto-detection logic
-    let detectedType = requestedTool;
+    // Auto-detection logic (Case Insensitive)
+    let detectedType = '';
 
     // Cortex: "Endpoint Status", "Endpoint Name", "Endpoint Type"
     if (headers.includes('endpoint name') && headers.includes('endpoint type')) detectedType = 'cortex';
 
     // Vicarius: "Name", "Attributes", "Vulnerabilities - Architecture"
-    // Note: "Name" is generic, but "Vulnerabilities - Architecture" or "Asset Groups" is specific
-    else if (headers.includes('asset groups') || (headers.includes('name') && headers.includes('vulnerabilities - architecture'))) detectedType = 'vicarius';
+    // Also check for "Asset Groups" separately just in case
+    else if (headers.includes('asset groups') || (headers.includes('name') && headers.includes('attributes'))) detectedType = 'vicarius';
 
-    // Warp: "Email", "Active Device Count", "Access Seat"
+    // Warp: "Email", "Active Device Count"
     else if (headers.includes('active device count') && headers.includes('email')) detectedType = 'warp';
 
-    // JumpCloud Devices: "displayName", "osFamily", "agentVersion"
+    // JumpCloud Devices: "displayName", "osFamily"
     else if (headers.includes('displayname') && headers.includes('osfamily')) detectedType = 'jumpcloud';
 
-    // JumpCloud Users: "email", "username", "account_locked"
-    else if (headers.includes('email') && headers.includes('account_locked')) detectedType = 'jumpcloud_users';
+    // JumpCloud Users: "email", "state" (or account_locked)
+    else if (headers.includes('email') && (headers.includes('account_locked') || headers.includes('state'))) detectedType = 'jumpcloud_users';
+
+    // Fallback: If detection failed, assume the user knows what source card they clicked
+    if (!detectedType) {
+        detectedType = requestedTool;
+    }
 
     const data: any[] = [];
     const now = new Date().toISOString();
