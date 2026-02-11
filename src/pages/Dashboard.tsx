@@ -25,7 +25,8 @@ import {
   clearAlerts,
   getOffboardingAlerts,
   getTerminatedEmployees,
-  cleanupOrphanedOffboardingAlerts
+  cleanupOrphanedOffboardingAlerts,
+  addSyncLog
 } from '@/lib/storage';
 import { supabase } from '@/lib/supabase';
 import { ComparisonResult, SyncStatus, Alert, SyncLog, OffboardingAlert } from '@/types/inventory';
