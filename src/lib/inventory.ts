@@ -400,7 +400,6 @@ export function compareInventories(
         // Check if we already have an endpoint for this user (unlikely if it's just a user list)
         // Create a violation entry
         const violation: NormalizedEndpoint = {
-          id: `violation-user-${email}`, // Ensure unique ID
           hostname: email, // Use email as hostname for User Violations
           ip: 'N/A',
           uuid: `violation-user-${email}`,
