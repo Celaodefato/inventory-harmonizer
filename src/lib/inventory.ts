@@ -249,7 +249,7 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
   try {
     const response = await fetch(`${config.jumpcloud.baseUrl}/api/systems`, {
       headers: {
-        'x-api-key': config.jumpcloud.apiToken,
+        'x-api-key': config.jumpcloud.apiKey,
         'Content-Type': 'application/json',
       },
     });
@@ -258,15 +258,15 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
 
     const data = await response.json();
     return data.map((item: any) => ({
-      id: item.id || item._id,
-      hostname: item.hostname || item.displayName,
-      ip: item.ip || item.primaryIp || item.remoteIP || '',
-      uuid: item.uuid || item._id || item.id,
-      os: item.os || item.osFamily,
-      lastSeen: item.lastSeen || item.lastContact,
+      id: item.id,
+      hostname: item.hostname,
+      ip: item.ip_address,
+      uuid: item.id,
+      os: item.os,
+      lastSeen: item.last_seen,
       source: 'jumpcloud' as const,
       origin: 'api' as const,
-      userEmail: item.userEmail || item.primaryEmail,
+      userEmail: item.user_email,
     }));
   } catch (error) {
     console.error('Error fetching from JumpCloud:', error);
@@ -282,14 +282,150 @@ export function compareInventories(
   jumpcloudEndpoints: Endpoint[],
   terminatedEmployees: TerminatedEmployee[]
 ): ComparisonResult {
-  terminatedInPam,
-    nonCompliant: allEndpoints.filter(e => !isEndpointCompliant(e)),
+  const endpointMap = new Map<string, NormalizedEndpoint>();
+
+  // Helper to merge/add endpoint
+  const mergeEndpoint = (sourceItem: any, sourceName: 'vicarius' | 'cortex' | 'pam' | 'jumpcloud') => {
+    if (!sourceItem.hostname) return;
+    const normalizedHost = normalizeHostname(sourceItem.hostname);
+
+    // Skip emails acting as hostnames (just in case)
+    if (normalizedHost.includes('@')) return;
+
+    if (!endpointMap.has(normalizedHost)) {
+      endpointMap.set(normalizedHost, {
+        hostname: sourceItem.hostname, // Keep original case for display
+        ip: sourceItem.ip || 'N/A',
+        uuid: sourceItem.uuid || `gen-${sourceName}-${normalizedHost}`,
+        os: sourceItem.os || 'Unknown',
+        lastSeen: sourceItem.lastSeen,
+        sources: [sourceName],
+        sourceOrigins: { [sourceName]: sourceItem.origin || 'api' },
+        userEmail: sourceItem.userEmail,
+        riskLevel: 'none'
+      });
+    } else {
+      const existing = endpointMap.get(normalizedHost)!;
+      if (!existing.sources.includes(sourceName)) {
+        existing.sources.push(sourceName);
+        existing.sourceOrigins[sourceName] = sourceItem.origin || 'api';
+      }
+      // Update metadata if missing
+      if (!existing.ip || existing.ip === 'N/A') existing.ip = sourceItem.ip;
+      if (!existing.os || existing.os === 'Unknown') existing.os = sourceItem.os;
+      if (!existing.userEmail) existing.userEmail = sourceItem.userEmail;
+
+      // Update Last Seen (take most recent)
+      if (sourceItem.lastSeen && (!existing.lastSeen || new Date(sourceItem.lastSeen) > new Date(existing.lastSeen))) {
+        existing.lastSeen = sourceItem.lastSeen;
+      }
+    }
+  };
+
+  // Process DEVICE sources only
+  vicariusEndpoints.forEach(item => mergeEndpoint(item, 'vicarius'));
+  cortexEndpoints.forEach(item => mergeEndpoint(item, 'cortex'));
+  pamEndpoints.forEach(item => mergeEndpoint(item, 'pam'));
+  jumpcloudEndpoints.forEach(item => mergeEndpoint(item, 'jumpcloud')); // JC Devices
+
+  const allEndpoints = Array.from(endpointMap.values());
+
+  // --- Compliance Rules for Devices ---
+  const nonCompliant: NormalizedEndpoint[] = [];
+
+  // Rule 1: Server Identification & Protection
+  const isServer = (hostname: string) => {
+    const h = normalizeHostname(hostname);
+    const upper = h.toUpperCase();
+    return !upper.startsWith('EXA-ARK') && !upper.startsWith('MACBOOKPRO') && !upper.startsWith('EXA-MAC');
+  };
+
+  allEndpoints.forEach(ep => {
+    if (isServer(ep.hostname)) {
+      const hasCortex = ep.sources.includes('cortex');
+      const hasVicarius = ep.sources.includes('vicarius');
+
+      if (!hasCortex || !hasVicarius) {
+        ep.riskLevel = 'high';
+        ep.riskReason = 'Servidor Fora de Compliance: Requer Cortex e Vicarius.';
+        if (!hasCortex) ep.riskReason += ' [Faltando Cortex]';
+        if (!hasVicarius) ep.riskReason += ' [Faltando Vicarius]';
+        nonCompliant.push(ep);
+      }
+    }
+  });
+
+  // --- User Compliance (Separate Stream) ---
+  // Rule 2: JumpCloud Users must be in Warp
+  const csvData = getCsvData();
+  const jcUsers = csvData.jumpcloud_users || [];
+  const warpUsers = csvData.warp || [];
+  const warpEmails = new Set(warpUsers.map(u => u.userEmail?.toLowerCase()).filter(Boolean));
+  const userViolations: any[] = [];
+
+  jcUsers.forEach(jcUser => {
+    const email = jcUser.userEmail;
+    const status = jcUser.status; // 'ACTIVATED'
+
+    if (email && status === 'ACTIVATED') {
+      const inWarp = warpEmails.has(email.toLowerCase());
+      if (!inWarp) {
+        userViolations.push({
+          userEmail: email,
+          riskReason: 'Usuário JumpCloud Ativo sem Warp',
+          sources: ['jumpcloud_users'], // Meta info
+        });
+      }
+    }
+  });
+
+  // Terminated Employees Logic
+  const terminatedWithActiveEndpoints: NormalizedEndpoint[] = [];
+  const terminatedInJumpcloud: TerminatedEmployee[] = [];
+  const terminatedInPam: TerminatedEmployee[] = [];
+
+  return {
+    allEndpoints,
+    onlyVicarius: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('vicarius')),
+    onlyCortex: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('cortex')),
+    onlyWarp: [], // Warp is now User-only, not an Endpoint source
+    onlyPam: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('pam')),
+    onlyJumpcloud: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('jumpcloud')),
+    inAllSources: allEndpoints.filter(e =>
+      e.sources.includes('vicarius') &&
+      e.sources.includes('cortex') &&
+      e.sources.includes('jumpcloud') // We only care about device sources for "All Sources"
+    ),
+    missingFromVicarius: allEndpoints.filter(e => !e.sources.includes('vicarius') && !isServer(e.hostname)),
+    missingFromCortex: allEndpoints.filter(e => !e.sources.includes('cortex')),
+    missingFromWarp: [], // N/A for Devices
+    missingFromPam: allEndpoints.filter(e => !e.sources.includes('pam') && isServer(e.hostname)),
+    missingFromJumpcloud: allEndpoints.filter(e => !e.sources.includes('jumpcloud')),
+    terminatedWithActiveEndpoints,
+    terminatedInJumpcloud,
+    terminatedInPam,
+    nonCompliant,
+    userViolations
   };
 }
 
 export function generateAlerts(comparison: ComparisonResult): Alert[] {
   const alerts: Alert[] = [];
   const timestamp = new Date().toISOString();
+
+  // User Compliance Alerts (JumpCloud vs Warp)
+  if (comparison.userViolations && comparison.userViolations.length > 0) {
+    comparison.userViolations.forEach(violation => {
+      alerts.push({
+        id: `alert-user-compliance-${violation.userEmail}`,
+        type: 'warning',
+        message: `Usuário JumpCloud sem Warp: ${violation.userEmail}`,
+        timestamp,
+        source: 'jumpcloud_users',
+        details: violation.riskReason
+      });
+    });
+  }
 
   // High priority - terminated employee alerts
   if (comparison.terminatedWithActiveEndpoints.length > 0) {
