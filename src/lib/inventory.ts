@@ -349,6 +349,89 @@ export function compareInventories(
     pamEmails.has(te.email.toLowerCase())
   );
 
+  const nonCompliant: NormalizedEndpoint[] = [];
+
+  // --- Compliance Rules ---
+
+  // Rule 1: Server Identification & Protection
+  // Servers: Hostname does NOT start with 'EXA-ARK' AND does NOT start with 'MACBOOKPRO' (case insensitive)
+  // Requirement: Servers must have Cortex AND Vicarius
+  const isServer = (hostname: string) => {
+    const h = hostname.toUpperCase();
+    return !h.startsWith('EXA-ARK') && !h.startsWith('MACBOOKPRO') && !h.startsWith('EXA-MAC');
+  };
+
+  // Rule 2: JumpCloud Users must be in Warp
+  // This requires a separate check, confusingly mapped to endpoints?
+  // We will attach a "risk" to the JumpCloud User endpoint if missing from Warp.
+  // First, let's normalize JC Users and Warp Users
+  const csvData = getCsvData(); // Assuming getCsvData is accessible here
+  const jcUsers = csvData.jumpcloud_users || [];
+  const warpUsers = csvData.warp || []; // Warp CSV is strictly users based on header mapping
+
+  const warpEmails = new Set(warpUsers.map(u => u.userEmail?.toLowerCase()).filter(Boolean));
+
+  // Process all normalized endpoints to apply Server Rule
+  allEndpoints.forEach(ep => {
+    if (isServer(ep.hostname)) {
+      const hasCortex = ep.sources.includes('cortex');
+      const hasVicarius = ep.sources.includes('vicarius');
+
+      if (!hasCortex || !hasVicarius) {
+        ep.riskLevel = 'high';
+        ep.riskReason = 'Servidor Fora de Compliance: Requer Cortex e Vicarius.';
+        if (!hasCortex) ep.riskReason += ' (Faltando Cortex)';
+        if (!hasVicarius) ep.riskReason += ' (Faltando Vicarius)';
+        nonCompliant.push(ep);
+      }
+    }
+  });
+
+  // Process User Compliance (JC Users vs Warp)
+  // We create pseudo-endpoints for JC Users to show them in the dashboard if they are non-compliant
+  jcUsers.forEach(jcUser => {
+    const email = jcUser.userEmail;
+    const status = jcUser.status; // 'ACTIVATED' etc.
+
+    if (email && status === 'ACTIVATED') {
+      const inWarp = warpEmails.has(email.toLowerCase());
+
+      if (!inWarp) {
+        // Check if we already have an endpoint for this user (unlikely if it's just a user list)
+        // Create a violation entry
+        const violation: NormalizedEndpoint = {
+          id: `violation-user-${email}`, // Ensure unique ID
+          hostname: email, // Use email as hostname for User Violations
+          ip: 'N/A',
+          uuid: `violation-user-${email}`,
+          os: 'N/A',
+          sources: ['jumpcloud'],
+          sourceOrigins: { jumpcloud: 'csv' },
+          userEmail: email,
+          riskLevel: 'medium',
+          riskReason: 'Usuário JumpCloud Ativo sem Warp',
+          lastSeen: new Date().toISOString() // TODO: parse real date
+        };
+
+        // Avoid duplicates if this "user hostname" already exists?
+        // Actually, if we mix User emails into Hostnames, it might be messy.
+        // But for "Single View", user acts as the key.
+        nonCompliant.push(violation);
+        // Also add to allEndpoints so it shows up?
+        // Maybe better to filter distinct User violations.
+        // For now, push to nonCompliant is enough to trigger alert/list.
+        allEndpoints.push(violation);
+      }
+    }
+  });
+
+  // Add existing non-compliant endpoints based on isEndpointCompliant
+  allEndpoints.forEach(e => {
+    if (!isEndpointCompliant(e) && !nonCompliant.includes(e)) {
+      nonCompliant.push(e);
+    }
+  });
+
   return {
     allEndpoints,
     onlyVicarius: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('vicarius')),

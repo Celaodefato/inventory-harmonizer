@@ -20,6 +20,7 @@ const defaultCsvData = {
   warp: null,
   pam: null,
   jumpcloud: null,
+  jumpcloud_users: null,
 };
 
 // API Config
@@ -321,6 +322,7 @@ export interface CsvData {
   warp: any[] | null;
   pam: any[] | null;
   jumpcloud: any[] | null;
+  jumpcloud_users: any[] | null;
 }
 
 export interface CsvMetadata {

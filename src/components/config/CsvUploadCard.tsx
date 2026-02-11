@@ -63,13 +63,13 @@ export function CsvUploadCard({
 
             // Save data
             const meta: CsvMetadata = {
-                tool,
+                tool: (result.detectedType as keyof CsvData) || tool,
                 filename: file.name,
                 timestamp: new Date().toISOString(),
                 count: result.count,
             };
 
-            saveCsvData(tool, result.data, meta);
+            saveCsvData((result.detectedType as keyof CsvData) || tool, result.data, meta);
             onUpdate();
 
             toast({
