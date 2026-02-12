@@ -334,26 +334,23 @@ export function compareInventories(
   const servers: NormalizedEndpoint[] = [];
   const userViolations: any[] = [];
 
-  // Helper: Is Valid Workstation Hostname (Strict)
+  // Helper: Is Valid Workstation Hostname
+  // Aceita qualquer hostname que comece com EXA-ARK, EXA-MAC, ou MACBOOKPRO
   const isValidWorkstationName = (hostname: string) => {
     const h = hostname.toUpperCase();
-    return h.startsWith('EXA-ARKLX') ||
-      h.startsWith('EXA-ARKNT') ||
-      h.startsWith('EXA-ARKMAC') ||
-      h.startsWith('EXA-MAC');
+    return h.startsWith('EXA-ARK') ||
+      h.startsWith('EXA-MAC') ||
+      h.startsWith('MACBOOKPRO');
   };
 
-  // Helper: Is Server (Existing Logic - Excluding Workstations + MacBooks)
+  // Helper: Is Server
+  // Servidores são dispositivos que NÃO seguem o padrão de workstation
   const isServer = (hostname: string) => {
-    const h = normalizeHostname(hostname);
-    const upper = h.toUpperCase();
-    // If it's a valid workstation name, it's definitely not a server
-    if (isValidWorkstationName(hostname)) return false;
-
-    // Legacy server detection (everything that is NOT a workstation pattern)
-    // We treat anything NOT matching standard workstation patterns as potential server
-    // or foreign device.
-    return !upper.startsWith('EXA-ARK') && !upper.startsWith('MACBOOKPRO') && !upper.startsWith('EXA-MAC');
+    const upper = hostname.toUpperCase();
+    // Se começa com padrão de workstation, não é servidor
+    return !upper.startsWith('EXA-ARK') &&
+      !upper.startsWith('EXA-MAC') &&
+      !upper.startsWith('MACBOOKPRO');
   };
 
   allEndpoints.forEach(ep => {
