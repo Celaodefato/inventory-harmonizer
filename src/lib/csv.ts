@@ -23,7 +23,11 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
         return { data: [], count: 0, error: 'Arquivo CSV vazio ou sem cabeçalho.' };
     }
 
-    const rawHeaders = lines[0].split(',').map(clean);
+    // Detect delimiter (comma or semicolon)
+    const firstLine = lines[0];
+    const delimiter = firstLine.includes(';') && (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+
+    const rawHeaders = firstLine.split(delimiter).map(clean);
     const headers = rawHeaders.map(h => h.toLowerCase());
 
     // Auto-detection logic (Case Insensitive)
@@ -47,18 +51,18 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 
     // Fallback: If detection failed, assume the user knows what source card they clicked
     if (!detectedType) {
-        detectedType = requestedTool;
+        detectedType = requestedTool ? requestedTool.toLowerCase() : ''; // Ensure lowercase
     }
 
     const data: any[] = [];
     const now = new Date().toISOString();
 
     for (let i = 1; i < lines.length; i++) {
-        // Handle CSV parsing with potentially quoted values containing commas (basic implementation)
-        // For robust CSV, regex is better, but split is fast for simple cases. 
-        // Given complexity, let's use a slightly smarter match or assume standard CSV without internal commas for now
-        // or a simple regex splitter.
-        const row = parseCsvLine(lines[i]);
+        // Handle CSV parsing with potentially quoted values
+        // We use a simple split if delimiter is semicolon, or the regex parser if comma (standard CSV)
+        // Adjust parseCsvLine to accept delimiter? Or just use split for simple cases?
+        // Let's make a simple splitter that respects quotes.
+        const row = parseCsvCustom(lines[i], delimiter);
 
         if (row.length < headers.length * 0.5) continue; // Skip heavily malformed lines
 
@@ -150,16 +154,23 @@ function getValue(row: string[], headers: string[], colName: string): string {
     return '';
 }
 
-// Simple regex to handle quoted fields with commas
-function parseCsvLine(text: string): string[] {
-    let p = '', row = [''], i = 0, r = 0, s = !0, l;
-    for (l of text) {
-        if ('"' === l) {
-            if (s && l === p) row[r] += l;
-            s = !s;
-        } else if (',' === l && s) l = row[++r] = '';
-        else row[r] += l;
-        p = l;
+function parseCsvCustom(text: string, delimiter: string): string[] {
+    // Simple parser handling quotes and delimiter
+    const row: string[] = [];
+    let current = '';
+    let inQuote = false;
+
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        if (char === '"') {
+            inQuote = !inQuote;
+        } else if (char === delimiter && !inQuote) {
+            row.push(current.replace(/^"|"$/g, '').replace(/""/g, '"'));
+            current = '';
+        } else {
+            current += char;
+        }
     }
-    return row.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"'));
+    row.push(current.replace(/^"|"$/g, '').replace(/""/g, '"'));
+    return row;
 }
