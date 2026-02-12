@@ -42,6 +42,7 @@ export interface ComparisonResult {
   terminatedInJumpcloud: TerminatedEmployee[];
   terminatedInPam: TerminatedEmployee[];
   nonCompliant: NormalizedEndpoint[];
+  userViolations: any[];
 }
 
 export interface ApiConfig {
@@ -89,6 +90,7 @@ export interface Alert {
   message: string;
   timestamp: string;
   source?: string;
+  details?: string;
 }
 
 export interface SyncStatus {
