@@ -209,10 +209,18 @@ export default function ApiConfigPage() {
             />
             <CsvUploadCard
               tool="jumpcloud"
-              title="JumpCloud"
+              title="JumpCloud (Devices)"
               color="bg-blue-500"
-              icon={<Users className="h-5 w-5 text-white" />}
+              icon={<Server className="h-5 w-5 text-white" />}
               metadata={csvMetadata.jumpcloud}
+              onUpdate={refreshMetadata}
+            />
+            <CsvUploadCard
+              tool="jumpcloud_users"
+              title="JumpCloud (Users)"
+              color="bg-blue-400"
+              icon={<Users className="h-5 w-5 text-white" />}
+              metadata={csvMetadata.jumpcloud_users}
               onUpdate={refreshMetadata}
             />
           </div>

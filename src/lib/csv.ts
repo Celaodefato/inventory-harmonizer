@@ -41,7 +41,18 @@ const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[
         lastSeen: [],
         other: { status: ['state', 'account_locked'], userEmail: ['email'] }
     },
-    // Generic fallback handled by code
+    pam: {
+        hostname: ['asset name', 'name', 'hostname'],
+        ip: ['ip address', 'ip'],
+        os: ['operating system', 'os'],
+        lastSeen: ['last access']
+    },
+    generic: {
+        hostname: ['hostname', 'name'],
+        ip: ['ip', 'ip address'],
+        os: ['os', 'operating system'],
+        lastSeen: ['last seen']
+    }
 };
 
 export function parseCsv(content: string, requestedTool: string): ParsedCsvResult {

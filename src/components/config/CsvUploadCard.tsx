@@ -34,7 +34,10 @@ export function CsvUploadCard({
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        const validTypes = ['text/csv', 'application/vnd.ms-excel', 'application/csv', 'text/x-csv', 'application/x-csv', 'text/comma-separated-values', 'text/x-comma-separated-values'];
+        const isCsvExt = file.name.toLowerCase().endsWith('.csv');
+
+        if (!validTypes.includes(file.type) && !isCsvExt) {
             toast({
                 title: 'Formato inválido',
                 description: 'Por favor, envie um arquivo CSV.',
