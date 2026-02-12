@@ -47,8 +47,8 @@ export function CsvUploadCard({
         const reader = new FileReader();
 
         reader.onload = async (event) => {
-            const content = event.target?.result as string;
-            const result = parseCsv(content, tool);
+            const text = event.target?.result as string;
+            const result = parseCsv(text, tool.toLowerCase());
 
             if (result.error) {
                 toast({
