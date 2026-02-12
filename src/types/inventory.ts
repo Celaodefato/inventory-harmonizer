@@ -43,6 +43,9 @@ export interface ComparisonResult {
   terminatedInPam: TerminatedEmployee[];
   nonCompliant: NormalizedEndpoint[];
   userViolations: any[];
+  namingViolations: NormalizedEndpoint[];
+  workstations: NormalizedEndpoint[];
+  servers: NormalizedEndpoint[];
 }
 
 export interface ApiConfig {

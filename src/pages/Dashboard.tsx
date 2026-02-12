@@ -35,6 +35,9 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+
 export default function Dashboard() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({
     isLoading: false,
@@ -57,6 +60,7 @@ export default function Dashboard() {
 
   // Calculate non-compliance count based on new hostname-aware logic
   const nonComplianceCount = comparison?.nonCompliant.length || 0;
+  const namingViolationCount = comparison?.namingViolations.length || 0;
 
   useEffect(() => {
     const loadData = async () => {
@@ -322,52 +326,100 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Primary Metrics Grid */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Total Monitorado"
-            value={comparison?.allEndpoints.length || 0}
-            subtitle="Ativos únicos identificados"
-            icon={<Server className="h-4 w-4" />}
-          />
-          <StatCard
-            title="Sincronização Total"
-            value={comparison?.inAllSources.length || 0}
-            subtitle="Presentes em todas as bases"
-            icon={<CheckCircle2 className="h-4 w-4" />}
-            variant={comparison?.inAllSources.length && comparison.inAllSources.length > 0 ? 'success' : 'default'}
-          />
-          <StatCard
-            title="Gaps de Inventário"
-            value={divergencesCount}
-            subtitle="Divergências entre ferramentas"
-            icon={<AlertTriangle className="h-4 w-4" />}
-            variant={divergencesCount > 0 ? 'warning' : 'default'}
-          />
-          <StatCard
-            title="Saúde do Sistema"
-            value={syncStatus.status === 'syncing' ? 'Sincronizando' : 'Pronto'}
-            subtitle="Conexões com 5 APIs ativas"
-            icon={<Shield className="h-4 w-4" />}
-          />
-        </div>
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="bg-card border border-border">
+            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+            <TabsTrigger value="workstations">
+              Workstations
+              {comparison?.workstations && <Badge variant="secondary" className="ml-2 text-xs">{comparison.workstations.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="servers">
+              Servidores
+              {comparison?.servers && <Badge variant="secondary" className="ml-2 text-xs">{comparison.servers.length}</Badge>}
+            </TabsTrigger>
+            <TabsTrigger value="naming" className={namingViolationCount > 0 ? "text-destructive" : ""}>
+              Nomenclatura
+              {namingViolationCount > 0 && <Badge variant="destructive" className="ml-2 text-xs">{namingViolationCount}</Badge>}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Charts and Alerts Row */}
-        <div className="mb-8 grid gap-6 lg:grid-cols-2">
-          <EndpointChart
-            vicariusCount={endpointCounts.vicarius}
-            cortexCount={endpointCounts.cortex}
-            warpCount={endpointCounts.warp}
-            pamCount={endpointCounts.pam}
-            jumpcloudCount={endpointCounts.jumpcloud}
-          />
-          <AlertsPreview alerts={alerts} />
-        </div>
+          <TabsContent value="overview" className="space-y-6 animate-fade-in">
+            {/* Primary Metrics Grid */}
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Total Monitorado"
+                value={comparison?.allEndpoints.length || 0}
+                subtitle="Ativos únicos identificados"
+                icon={<Server className="h-4 w-4" />}
+              />
+              <StatCard
+                title="Sincronização Total"
+                value={comparison?.inAllSources.length || 0}
+                subtitle="Presentes em todas as bases"
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                variant={comparison?.inAllSources.length && comparison.inAllSources.length > 0 ? 'success' : 'default'}
+              />
+              <StatCard
+                title="Gaps de Inventário"
+                value={divergencesCount}
+                subtitle="Divergências entre ferramentas"
+                icon={<AlertTriangle className="h-4 w-4" />}
+                variant={divergencesCount > 0 ? 'warning' : 'default'}
+              />
+              <StatCard
+                title="Saúde do Sistema"
+                value={syncStatus.status === 'syncing' ? 'Sincronizando' : 'Pronto'}
+                subtitle="Conexões com 5 APIs ativas"
+                icon={<Shield className="h-4 w-4" />}
+              />
+            </div>
 
-        {/* Comparison Table */}
-        {comparison && (
-          <ComparisonTable endpoints={comparison.allEndpoints} title="Inventário Consolidado" />
-        )}
+            {/* Charts and Alerts Row */}
+            <div className="mb-8 grid gap-6 lg:grid-cols-2">
+              <EndpointChart
+                vicariusCount={endpointCounts.vicarius}
+                cortexCount={endpointCounts.cortex}
+                warpCount={endpointCounts.warp}
+                pamCount={endpointCounts.pam}
+                jumpcloudCount={endpointCounts.jumpcloud}
+              />
+              <AlertsPreview alerts={alerts} />
+            </div>
+
+            {/* Comparison Table */}
+            {comparison && (
+              <ComparisonTable endpoints={comparison.allEndpoints} title="Inventário Consolidado" />
+            )}
+          </TabsContent>
+
+          <TabsContent value="workstations" className="space-y-6 animate-fade-in">
+            {comparison && (
+              <ComparisonTable endpoints={comparison.workstations} title="Workstations (EXA-ARK/EXA-MAC)" />
+            )}
+          </TabsContent>
+
+          <TabsContent value="servers" className="space-y-6 animate-fade-in">
+            {comparison && (
+              <ComparisonTable endpoints={comparison.servers} title="Servidores e Outros Devices" />
+            )}
+          </TabsContent>
+
+          <TabsContent value="naming" className="space-y-6 animate-fade-in">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+              <h3 className="text-lg font-semibold text-destructive flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5" />
+                Violações de Nomenclatura
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Dispositivos classificados como Workstation mas que fogem do padrão <code>EXA-ARKLX/NT/MAC</code>.
+              </p>
+            </div>
+            {comparison && (
+              <ComparisonTable endpoints={comparison.namingViolations} title="Hosts Fora do Padrão" />
+            )}
+          </TabsContent>
+        </Tabs>
+
       </div>
 
       {/* Compliance Modal */}

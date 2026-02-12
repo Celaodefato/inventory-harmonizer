@@ -36,6 +36,7 @@ export function normalizeEndpoint(endpoint: Endpoint): NormalizedEndpoint {
   };
 }
 
+
 export function isWorkstation(hostname: string): boolean {
   const h = hostname.toUpperCase();
   return h.startsWith('EXA-ARKLX') ||
@@ -275,86 +276,92 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
 }
 
 export function compareInventories(
-  vicariusEndpoints: Endpoint[],
-  cortexEndpoints: Endpoint[],
-  warpEndpoints: Endpoint[],
-  pamEndpoints: Endpoint[],
-  jumpcloudEndpoints: Endpoint[],
-  terminatedEmployees: TerminatedEmployee[]
+  vicarius: Endpoint[],
+  cortex: Endpoint[],
+  warp: Endpoint[],
+  pam: Endpoint[],
+  jumpcloud: Endpoint[],
+  terminatedEmployees: TerminatedEmployee[] = []
 ): ComparisonResult {
-  const endpointMap = new Map<string, NormalizedEndpoint>();
+  const map = new Map<string, NormalizedEndpoint>();
 
-  // Helper to merge/add endpoint
-  const mergeEndpoint = (sourceItem: any, sourceName: 'vicarius' | 'cortex' | 'pam' | 'jumpcloud' | 'warp') => {
-    if (!sourceItem.hostname) return;
-    const normalizedHost = normalizeHostname(sourceItem.hostname);
+  // 1. Normalize and Merge
+  const processEndpoints = (endpoints: Endpoint[], source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud') => {
+    endpoints.forEach(ep => {
+      const h = normalizeHostname(ep.hostname);
+      const uuid = ep.hostname.toLowerCase(); // Simple unique key for now
 
-    // Skip emails acting as hostnames (just in case they slipped through)
-    if (normalizedHost.includes('@')) return;
-
-    if (!endpointMap.has(normalizedHost)) {
-      endpointMap.set(normalizedHost, {
-        hostname: sourceItem.hostname, // Keep original case for display
-        ip: sourceItem.ip || 'N/A',
-        uuid: sourceItem.uuid || `gen-${sourceName}-${normalizedHost}`,
-        os: sourceItem.os || 'Unknown',
-        lastSeen: sourceItem.lastSeen,
-        sources: [sourceName],
-        sourceOrigins: { [sourceName]: sourceItem.origin || 'api' },
-        userEmail: sourceItem.userEmail,
-        riskLevel: 'none'
-      });
-    } else {
-      const existing = endpointMap.get(normalizedHost)!;
-      if (!existing.sources.includes(sourceName as any)) {
-        existing.sources.push(sourceName as any);
-        existing.sourceOrigins[sourceName] = sourceItem.origin || 'api';
+      if (!map.has(uuid)) {
+        map.set(uuid, {
+          hostname: ep.hostname, // Keep original case for display
+          ip: ep.ip,
+          uuid: uuid,
+          os: ep.os,
+          lastSeen: ep.lastSeen,
+          sources: [source],
+          sourceOrigins: { [source]: ep.origin },
+          userEmail: ep.userEmail,
+          userId: ep.userId,
+          riskLevel: 'none'
+        });
+      } else {
+        const existing = map.get(uuid)!;
+        if (!existing.sources.includes(source)) {
+          existing.sources.push(source);
+          existing.sourceOrigins[source] = ep.origin;
+        }
+        // Enrich data
+        if (!existing.ip && ep.ip) existing.ip = ep.ip;
+        if (!existing.os && ep.os) existing.os = ep.os;
+        if (!existing.lastSeen && ep.lastSeen) existing.lastSeen = ep.lastSeen;
+        if (!existing.userEmail && ep.userEmail) existing.userEmail = ep.userEmail;
       }
-      // Update metadata if missing
-      if (!existing.ip || existing.ip === 'N/A') existing.ip = sourceItem.ip;
-      if (!existing.os || existing.os === 'Unknown') existing.os = sourceItem.os;
-      if (!existing.userEmail) existing.userEmail = sourceItem.userEmail;
-
-      // Update Last Seen (take most recent)
-      if (sourceItem.lastSeen && (!existing.lastSeen || new Date(sourceItem.lastSeen) > new Date(existing.lastSeen))) {
-        existing.lastSeen = sourceItem.lastSeen;
-      }
-    }
+    });
   };
 
-  // Process DEVICE sources (now including Warp since it has Hostname)
-  vicariusEndpoints.forEach(item => mergeEndpoint(item, 'vicarius'));
-  cortexEndpoints.forEach(item => mergeEndpoint(item, 'cortex'));
-  warpEndpoints.forEach(item => mergeEndpoint(item, 'warp'));
-  pamEndpoints.forEach(item => mergeEndpoint(item, 'pam'));
-  jumpcloudEndpoints.forEach(item => mergeEndpoint(item, 'jumpcloud')); // JC Devices
+  processEndpoints(vicarius, 'vicarius');
+  processEndpoints(cortex, 'cortex');
+  processEndpoints(warp, 'warp');
+  processEndpoints(pam, 'pam');
+  processEndpoints(jumpcloud, 'jumpcloud');
 
-  const csvData = getCsvData();
-  const jcUsers = csvData.jumpcloud_users || [];
-
-  // Process Active JC Users as "JumpCloud" source presence if hostname is valid
-  jcUsers.forEach(item => {
-    const status = (item.status || '').toUpperCase();
-    // Check for valid status and hostname
-    if (item.hostname && (status === 'ACTIVATED' || status === 'TRUE' || status === 'ACTIVE')) {
-      mergeEndpoint(item, 'jumpcloud');
-    }
-  });
-
-  const allEndpoints = Array.from(endpointMap.values());
+  const allEndpoints = Array.from(map.values());
 
   // --- Compliance Rules for Devices ---
   const nonCompliant: NormalizedEndpoint[] = [];
+  const namingViolations: NormalizedEndpoint[] = [];
+  const workstations: NormalizedEndpoint[] = [];
+  const servers: NormalizedEndpoint[] = [];
+  const userViolations: any[] = [];
 
-  // Rule 1: Server Identification & Protection
+  // Helper: Is Valid Workstation Hostname (Strict)
+  const isValidWorkstationName = (hostname: string) => {
+    const h = hostname.toUpperCase();
+    return h.startsWith('EXA-ARKLX') ||
+      h.startsWith('EXA-ARKNT') ||
+      h.startsWith('EXA-ARKMAC') ||
+      h.startsWith('EXA-MAC');
+  };
+
+  // Helper: Is Server (Existing Logic - Excluding Workstations + MacBooks)
   const isServer = (hostname: string) => {
     const h = normalizeHostname(hostname);
     const upper = h.toUpperCase();
+    // If it's a valid workstation name, it's definitely not a server
+    if (isValidWorkstationName(hostname)) return false;
+
+    // Legacy server detection (everything that is NOT a workstation pattern)
+    // We treat anything NOT matching standard workstation patterns as potential server
+    // or foreign device.
     return !upper.startsWith('EXA-ARK') && !upper.startsWith('MACBOOKPRO') && !upper.startsWith('EXA-MAC');
   };
 
   allEndpoints.forEach(ep => {
+    // Categorize
     if (isServer(ep.hostname)) {
+      servers.push(ep);
+
+      // Server Compliance Rule
       const hasCortex = ep.sources.includes('cortex');
       const hasVicarius = ep.sources.includes('vicarius');
 
@@ -365,28 +372,29 @@ export function compareInventories(
         if (!hasVicarius) ep.riskReason += ' [Faltando Vicarius]';
         nonCompliant.push(ep);
       }
-    }
-  });
+    } else {
+      // It's a Workstation (or intended to be)
+      workstations.push(ep);
 
-  // Rule 2: Workstation Compliance (Warp + JumpCloud)
-  // Workstations must have Warp
-  // We check 'jumpcloud' source presence too, which covers both Devices and Active Users now.
-  // Rule 2: Workstation Compliance (Warp + JumpCloud)
-  // Workstations must have Warp
-  const userViolations: any[] = []; // Restore this to populate Alerts
+      // 1. Naming Convention Check
+      if (!isValidWorkstationName(ep.hostname)) {
+        // It failed strict workstation check, but wasn't classified as Server
+        // This means it starts with EXA-ARK... but maybe not the right suffix?
+        // Or it matched the loose "Not Server" logic but failed strict check.
+        ep.riskLevel = 'medium';
+        ep.riskReason = (ep.riskReason || '') + 'Violação de Nomenclatura (Padrão: EXA-ARKLX/NT/MAC)';
+        namingViolations.push(ep);
+      }
 
-  allEndpoints.forEach(ep => {
-    if (!isServer(ep.hostname)) {
+      // 2. Tool Compliance Rule
       const hasWarp = ep.sources.includes('warp');
-
       if (!hasWarp) {
         ep.riskLevel = 'medium';
         ep.riskReason = (ep.riskReason ? ep.riskReason + '; ' : '') + 'Ausente no Warp';
         if (!nonCompliant.includes(ep)) nonCompliant.push(ep);
 
-        // Also add to userViolations for Alerts
         userViolations.push({
-          userEmail: ep.userEmail || ep.hostname, // Use hostname if email missing
+          userEmail: ep.userEmail || ep.hostname,
           riskReason: 'Workstation Ativa sem Warp',
           sources: ep.sources
         });
@@ -399,8 +407,34 @@ export function compareInventories(
   const terminatedInJumpcloud: TerminatedEmployee[] = [];
   const terminatedInPam: TerminatedEmployee[] = [];
 
+  terminatedEmployees.forEach(employee => {
+    // Check active endpoints
+    const active = allEndpoints.filter(ep =>
+      (ep.userEmail && ep.userEmail.toLowerCase() === employee.email.toLowerCase()) ||
+      (ep.hostname && ep.hostname.toLowerCase().includes(employee.name.toLowerCase().split(' ')[0]))
+    );
+    if (active.length > 0) {
+      active.forEach(ep => {
+        if (!terminatedWithActiveEndpoints.includes(ep)) {
+          ep.riskLevel = 'high';
+          ep.riskReason = `Usuário Desligado (${employee.email}) com acesso ativo`;
+          terminatedWithActiveEndpoints.push(ep);
+        }
+      });
+    }
+
+    // Check JumpCloud
+    const inJc = jumpcloud.find(ep => ep.userEmail === employee.email || ep.hostname === employee.email);
+    if (inJc) {
+      terminatedInJumpcloud.push(employee);
+    }
+  });
+
   return {
     allEndpoints,
+    workstations,
+    servers,
+    namingViolations,
     onlyVicarius: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('vicarius')),
     onlyCortex: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('cortex')),
     onlyWarp: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('warp')),
@@ -427,87 +461,28 @@ export function compareInventories(
 
 export function generateAlerts(comparison: ComparisonResult): Alert[] {
   const alerts: Alert[] = [];
-  const timestamp = new Date().toISOString();
+  const now = new Date().toISOString();
 
-  // User Compliance Alerts (JumpCloud vs Warp)
-  if (comparison.userViolations && comparison.userViolations.length > 0) {
-    comparison.userViolations.forEach(violation => {
-      alerts.push({
-        id: `alert-user-compliance-${violation.userEmail}`,
-        type: 'warning',
-        title: 'Conformidade de Usuário',
-        message: `Usuário JumpCloud sem Warp: ${violation.userEmail}`,
-        timestamp,
-        source: 'jumpcloud_users',
-        details: violation.riskReason
-      });
-    });
-  }
-
-  // High priority - terminated employee alerts
-  if (comparison.terminatedWithActiveEndpoints.length > 0) {
-    alerts.push({
-      id: `alert-term-endpoints-${Date.now()}`,
-      type: 'error',
-      title: '⚠️ Risco: Endpoints de desligados ativos',
-      message: `${comparison.terminatedWithActiveEndpoints.length} endpoint(s) associado(s) a colaboradores desligados`,
-      timestamp,
-      source: 'security',
-    });
-  }
-
-  if (comparison.terminatedInJumpcloud.length > 0) {
-    alerts.push({
-      id: `alert-term-jc-${Date.now()}`,
-      type: 'error',
-      title: 'Desligados ainda no JumpCloud',
-      message: `${comparison.terminatedInJumpcloud.length} usuário(s) desligado(s) ainda presente(s) no JumpCloud`,
-      timestamp,
-      source: 'jumpcloud',
-    });
-  }
-
-  if (comparison.terminatedInPam.length > 0) {
-    alerts.push({
-      id: `alert-term-pam-${Date.now()}`,
-      type: 'error',
-      title: 'Desligados ainda no PAM',
-      message: `${comparison.terminatedInPam.length} usuário(s) desligado(s) com acesso ao PAM`,
-      timestamp,
-      source: 'pam',
-    });
-  }
-
-  if (comparison.nonCompliant.length > 0) {
-    alerts.push({
-      id: `alert-non-compliant-${Date.now()}`,
-      type: 'error',
-      title: 'Máquinas Fora de Compliance',
-      message: `${comparison.nonCompliant.length} máquina(s) não possuem todas as ferramentas obrigatórias instaladas`,
-      timestamp,
-    });
-  }
-
-  // Standard missing alerts - only show if there are actual gaps based on requirements
+  // 1. Gaps (Missing from Tools)
   if (comparison.missingFromVicarius.length > 0) {
     alerts.push({
-      id: `alert-vic-${Date.now()}`,
+      id: `alert-vicarius-${Date.now()}`,
       type: 'warning',
-      title: 'Ausentes no Vicarius',
-      message: `${comparison.missingFromVicarius.length} máquina(s) não encontrada(s) no Vicarius`,
-      timestamp,
-      source: 'vicarius',
+      title: 'Gap no Vicarius',
+      message: `${comparison.missingFromVicarius.length} dispositivos ausentes no Vicarius`,
+      timestamp: now,
+      source: 'Vicarius'
     });
   }
 
   if (comparison.missingFromCortex.length > 0) {
     alerts.push({
-      id: `alert-ctx-${Date.now()}`,
-      type: 'warning',
-      title: 'Ausentes no Cortex',
-      message: `${comparison.missingFromCortex.length} máquina(s) não encontrada(s) no Cortex`,
-      timestamp,
-      source: 'cortex',
+      id: `alert-cortex-${Date.now()}`,
+      type: 'error',
+      title: 'Gap no Cortex XDR',
+      message: `${comparison.missingFromCortex.length} dispositivos críticos sem proteção Cortex`,
+      timestamp: now,
+      source: 'Cortex'
     });
   }
 
@@ -515,32 +490,46 @@ export function generateAlerts(comparison: ComparisonResult): Alert[] {
     alerts.push({
       id: `alert-warp-${Date.now()}`,
       type: 'warning',
-      title: 'Ausentes no Warp',
-      message: `${comparison.missingFromWarp.length} workstation(s) sem Warp`,
-      timestamp,
-      source: 'warp',
+      title: 'Gap no Warp',
+      message: `${comparison.missingFromWarp.length} workstations sem Warp ativo`,
+      timestamp: now,
+      source: 'Warp'
     });
   }
 
-  if (comparison.missingFromJumpcloud.length > 0) {
+  // 2. Terminated Employees Risk
+  if (comparison.terminatedWithActiveEndpoints.length > 0) {
     alerts.push({
-      id: `alert-jc-${Date.now()}`,
-      type: 'warning',
-      title: 'Ausentes no JumpCloud',
-      message: `${comparison.missingFromJumpcloud.length} workstation(s) sem registro no JumpCloud`,
-      timestamp,
-      source: 'jumpcloud',
+      id: `alert-term-risk-${Date.now()}`,
+      type: 'error',
+      title: 'Risco Crítico: Usuários Desligados',
+      message: `${comparison.terminatedWithActiveEndpoints.length} dispositivos ativos associados a ex-colaboradores`,
+      timestamp: now,
+      source: 'RH/Security'
     });
   }
 
-  if (comparison.missingFromPam.length > 0) {
+  // 3. User & Workstation Violations (from verify loop)
+  if (comparison.userViolations && comparison.userViolations.length > 0) {
     alerts.push({
-      id: `alert-pam-${Date.now()}`,
+      id: `alert-user-compliance-${Date.now()}`,
       type: 'warning',
-      title: 'Ausentes no PAM',
-      message: `${comparison.missingFromPam.length} workstation(s) (não EXA-ARK) sem acesso ao PAM`,
-      timestamp,
-      source: 'pam',
+      title: 'Workstations Fora de Compliance',
+      message: `${comparison.userViolations.length} usuários com violação de segurança (ex: Sem Warp)`,
+      timestamp: now,
+      source: 'Compliance'
+    });
+  }
+
+  // 4. Naming Violations
+  if (comparison.namingViolations && comparison.namingViolations.length > 0) {
+    alerts.push({
+      id: `alert-naming-${Date.now()}`,
+      type: 'info',
+      title: 'Violação de Nomenclatura',
+      message: `${comparison.namingViolations.length} dispositivos fora do padrão de hostname`,
+      timestamp: now,
+      source: 'Padronização'
     });
   }
 
