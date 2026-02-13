@@ -87,7 +87,7 @@ export function getEndpointRiskDetails(endpoint: NormalizedEndpoint): { level: N
 export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
   const configured = await isApiConfiguredAsync('vicarius');
   if (!configured) {
-    const csvData = getCsvData().vicarius;
+    const csvData = (await getCsvData()).vicarius;
     if (csvData && csvData.length > 0) return csvData;
 
     // Return empty instead of mock data
@@ -126,7 +126,7 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
 export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
   const configured = await isApiConfiguredAsync('cortex');
   if (!configured) {
-    const csvData = getCsvData().cortex;
+    const csvData = (await getCsvData()).cortex;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];
@@ -164,7 +164,7 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
 export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
   const configured = await isApiConfiguredAsync('warp');
   if (!configured) {
-    const csvData = getCsvData().warp;
+    const csvData = (await getCsvData()).warp;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];
@@ -202,7 +202,7 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
 export async function fetchPamEndpoints(): Promise<Endpoint[]> {
   const configured = await isApiConfiguredAsync('pam');
   if (!configured) {
-    const csvData = getCsvData().pam;
+    const csvData = (await getCsvData()).pam;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];
@@ -240,7 +240,7 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
 export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
   const configured = await isApiConfiguredAsync('jumpcloud');
   if (!configured) {
-    const csvData = getCsvData().jumpcloud;
+    const csvData = (await getCsvData()).jumpcloud;
     if (csvData && csvData.length > 0) return csvData;
 
     return [];

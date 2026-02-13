@@ -109,6 +109,13 @@ export default function Dashboard() {
           handleSync(); // Re-run comparison when employees change
         }
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventory_data' },
+        () => {
+          handleSync(); // Re-run comparison when CSV data changes
+        }
+      )
       .subscribe();
 
     return () => {

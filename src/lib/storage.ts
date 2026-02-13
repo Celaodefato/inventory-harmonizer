@@ -345,38 +345,67 @@ export interface CsvMetadata {
   count: number;
 }
 
-export function getCsvData(): CsvData {
+export async function getCsvData(): Promise<CsvData> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEYS.CSV_DATA);
-    if (stored) {
-      return { ...defaultCsvData, ...JSON.parse(stored) };
-    }
-  } catch (error) {
-    console.error('Error reading CSV data from localStorage:', error);
-  }
-  return defaultCsvData;
-}
+    const { data, error } = await supabase.from('inventory_data').select('*');
+    if (error) throw error;
 
-export function saveCsvData(tool: keyof CsvData, data: any[] | null, metadata?: CsvMetadata | null): void {
-  try {
-    const current = getCsvData();
-    const updated = { ...current, [tool]: data };
-    localStorage.setItem(STORAGE_KEYS.CSV_DATA, JSON.stringify(updated));
-
-    if (metadata !== undefined) {
-      const allMeta = getCsvMetadata();
-      allMeta[tool] = metadata;
-      localStorage.setItem('inventory_csv_metadata', JSON.stringify(allMeta));
-    }
+    const result = { ...defaultCsvData };
+    data?.forEach((item: any) => {
+      if (item.tool_name && item.tool_name in result) {
+        (result as any)[item.tool_name] = item.raw_data || [];
+      }
+    });
+    return result;
   } catch (error) {
-    console.error('Error saving CSV data to localStorage:', error);
+    console.error('Error reading CSV data from Supabase:', error);
+    return defaultCsvData;
   }
 }
 
-export function getCsvMetadata(): Record<string, CsvMetadata | null> {
+export async function saveCsvData(tool: keyof CsvData, data: any[] | null, metadata?: CsvMetadata | null): Promise<void> {
   try {
-    const stored = localStorage.getItem('inventory_csv_metadata');
-    if (stored) return JSON.parse(stored);
-  } catch (e) { console.error(e); }
-  return { vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null };
+    const update: any = {
+      tool_name: tool,
+      raw_data: data || [],
+      updated_at: new Date().toISOString(),
+    };
+
+    if (metadata) {
+      update.filename = metadata.filename;
+      update.record_count = metadata.count;
+    }
+
+    const { error } = await supabase.from('inventory_data').upsert(update, { onConflict: 'tool_name' });
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error saving CSV data to Supabase:', error);
+  }
+}
+
+export async function getCsvMetadata(): Promise<Record<string, CsvMetadata | null>> {
+  try {
+    const { data, error } = await supabase.from('inventory_data').select('tool_name, filename, record_count, updated_at');
+    if (error) throw error;
+
+    const result: Record<string, CsvMetadata | null> = {
+      vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null, jumpcloud_users: null
+    };
+
+    data?.forEach((item: any) => {
+      if (item.tool_name && item.tool_name in result) {
+        result[item.tool_name] = {
+          tool: item.tool_name as keyof CsvData,
+          filename: item.filename || 'Arquivo desconhecido',
+          timestamp: item.updated_at,
+          count: item.record_count || 0
+        };
+      }
+    });
+
+    return result;
+  } catch (e) {
+    console.error('Error reading CSV metadata from Supabase:', e);
+    return { vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null, jumpcloud_users: null };
+  }
 }

@@ -5,6 +5,7 @@ import { IndividualToolCard } from '@/components/config/IndividualToolCard';
 import { CsvUploadCard } from '@/components/config/CsvUploadCard';
 import { getApiConfig, saveApiConfig, getCsvMetadata, CsvMetadata } from '@/lib/storage';
 import { ApiConfig } from '@/types/inventory';
+import { supabase } from '@/lib/supabase';
 
 export default function ApiConfigPage() {
   const [config, setConfig] = useState<ApiConfig>({
@@ -23,17 +24,34 @@ export default function ApiConfigPage() {
     jumpcloud: null,
   });
 
-  const refreshMetadata = () => {
-    setCsvMetadata(getCsvMetadata());
+  const refreshMetadata = async () => {
+    const meta = await getCsvMetadata();
+    setCsvMetadata(meta);
   };
 
   useEffect(() => {
     const loadData = async () => {
       const saved = await getApiConfig();
       setConfig(saved);
-      refreshMetadata();
+      await refreshMetadata();
     };
     loadData();
+
+    // Subscribe to inventory changes to refresh metadata
+    const channel = supabase
+      .channel('api-config-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'inventory_data' },
+        () => {
+          refreshMetadata();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const createSaveHandler = (tool: keyof ApiConfig, keyType: 'apiKey' | 'apiToken') => {

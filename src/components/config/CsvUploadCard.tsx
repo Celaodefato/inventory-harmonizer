@@ -72,7 +72,7 @@ export function CsvUploadCard({
                 count: result.count,
             };
 
-            saveCsvData((result.detectedType as keyof CsvData) || tool, result.data, meta);
+            await saveCsvData((result.detectedType as keyof CsvData) || tool, result.data, meta);
             onUpdate();
 
             toast({
@@ -87,8 +87,8 @@ export function CsvUploadCard({
         reader.readAsText(file);
     };
 
-    const clearData = () => {
-        saveCsvData(tool, null, null);
+    const clearData = async () => {
+        await saveCsvData(tool, null, null);
         onUpdate();
         toast({ title: 'Dados removidos', description: `Importação de ${title} removida.` });
     };
