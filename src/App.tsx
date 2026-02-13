@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import ApiConfig from "./pages/ApiConfig";
 import Terminated from "./pages/Terminated";
+import Users from "./pages/Users";
 import Logs from "./pages/Logs";
 import Alerts from "./pages/Alerts";
 import Profile from "./pages/Profile";
@@ -41,6 +42,7 @@ const AppRoutes = () => (
     <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
     <Route path="/api-config" element={<ProtectedRoute><ApiConfig /></ProtectedRoute>} />
     <Route path="/terminated" element={<ProtectedRoute><Terminated /></ProtectedRoute>} />
+    <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
     <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
     <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

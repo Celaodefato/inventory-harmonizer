@@ -155,3 +155,33 @@ export interface TerminatedEmployee {
   glpiUpdated?: boolean;
   responsible?: string;
 }
+
+// User Comparison Interfaces
+export interface JumpCloudUser {
+  email: string;
+  firstname: string;
+  lastname: string;
+  state: string; // 'ACTIVATED', 'SUSPENDED', etc.
+}
+
+export interface WarpUser {
+  email: string;
+  activeDeviceCount: number;
+}
+
+export type UserComplianceStatus =
+  | 'compliant'
+  | 'missing_warp'
+  | 'missing_jumpcloud'
+  | 'terminated_active';
+
+export interface UserComparison {
+  email: string;
+  name: string;
+  inJumpCloud: boolean;
+  inWarp: boolean;
+  jumpCloudStatus?: 'active' | 'suspended' | 'terminated';
+  warpDeviceCount?: number;
+  isTerminated: boolean;
+  complianceStatus: UserComplianceStatus;
+}

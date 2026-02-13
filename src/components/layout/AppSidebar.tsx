@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX, LogOut, User, Users } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -8,6 +8,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Configurar APIs', href: '/api-config', icon: Settings },
   { name: 'Desligados', href: '/terminated', icon: UserX },
+  { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Logs / Erros', href: '/logs', icon: FileText },
   { name: 'Alertas', href: '/alerts', icon: AlertTriangle },
 ];
