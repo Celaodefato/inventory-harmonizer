@@ -200,9 +200,21 @@ export async function getTerminatedEmployees(): Promise<TerminatedEmployee[]> {
       id: item.id,
       name: item.name,
       email: item.email,
-      terminationDate: item.termination_date, // Map from DB
-      status: item.status,
-      createdAt: item.created_at
+      terminationDate: item.termination_date,
+      notes: item.notes,
+      createdAt: item.created_at,
+      // Checklist fields
+      adDisabled: item.ad_disabled,
+      googlePasswordChanged: item.google_password_changed,
+      autoReplySet: item.auto_reply_set,
+      takeoutCompleted: item.takeout_completed,
+      machineBackup: item.machine_backup,
+      licenseRemovalRequested: item.license_removal_requested,
+      licenseRemoved: item.license_removed,
+      movedToTerminatedOu: item.moved_to_terminated_ou,
+      machineCollected: item.machine_collected,
+      glpiUpdated: item.glpi_updated,
+      responsible: item.responsible
     }));
   } catch (error) {
     console.error('Error reading terminated employees:', error);
@@ -215,36 +227,24 @@ export async function addTerminatedEmployee(employee: TerminatedEmployee): Promi
     name: employee.name,
     email: employee.email,
     termination_date: employee.terminationDate,
-    status: 'active'
+    notes: employee.notes,
+    status: 'active',
+    // Checklist fields
+    ad_disabled: employee.adDisabled || false,
+    google_password_changed: employee.googlePasswordChanged || false,
+    auto_reply_set: employee.autoReplySet || false,
+    takeout_completed: employee.takeoutCompleted || false,
+    machine_backup: employee.machineBackup || false,
+    license_removal_requested: employee.licenseRemovalRequested || false,
+    license_removed: employee.licenseRemoved || false,
+    moved_to_terminated_ou: employee.movedToTerminatedOu || false,
+    machine_collected: employee.machineCollected || false,
+    glpi_updated: employee.glpiUpdated || false,
+    responsible: employee.responsible
   };
 
-  const { data, error } = await supabase.from('terminated_employees').insert(dbEmployee).select();
+  const { error } = await supabase.from('terminated_employees').insert(dbEmployee).select();
   if (error) throw error;
-
-  if (data && data[0]) {
-    // Create Offboarding Alert
-    const newId = data[0].id;
-    const offboardingAlert = {
-      employee_id: newId,
-      employee_name: employee.name,
-      employee_email: employee.email,
-      status: 'pending',
-      checklist: {
-        adDisabled: false,
-        adMoved: false,
-        googleDisabled: false,
-        googlePasswordChanged: false,
-        autoReplySet: false,
-        googleTakeoutDone: false,
-        machineCollected: false,
-        machineBackup: false,
-        glpiUpdated: false,
-        licensesRemoved: false,
-        licensesConfirmed: false,
-      }
-    };
-    await supabase.from('offboarding_alerts').insert(offboardingAlert);
-  }
 }
 
 export async function updateTerminatedEmployee(employee: TerminatedEmployee): Promise<void> {
@@ -253,7 +253,20 @@ export async function updateTerminatedEmployee(employee: TerminatedEmployee): Pr
     .update({
       name: employee.name,
       email: employee.email,
-      termination_date: employee.terminationDate
+      termination_date: employee.terminationDate,
+      notes: employee.notes,
+      // Checklist fields
+      ad_disabled: employee.adDisabled,
+      google_password_changed: employee.googlePasswordChanged,
+      auto_reply_set: employee.autoReplySet,
+      takeout_completed: employee.takeoutCompleted,
+      machine_backup: employee.machineBackup,
+      license_removal_requested: employee.licenseRemovalRequested,
+      license_removed: employee.licenseRemoved,
+      moved_to_terminated_ou: employee.movedToTerminatedOu,
+      machine_collected: employee.machineCollected,
+      glpi_updated: employee.glpiUpdated,
+      responsible: employee.responsible
     })
     .eq('id', employee.id);
   if (error) console.error(error);

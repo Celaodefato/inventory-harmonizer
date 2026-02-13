@@ -141,4 +141,17 @@ export interface TerminatedEmployee {
   terminationDate: string;
   notes?: string;
   createdAt: string;
+
+  // Checklist de Offboarding
+  adDisabled?: boolean;
+  googlePasswordChanged?: boolean;
+  autoReplySet?: boolean;
+  takeoutCompleted?: boolean;
+  machineBackup?: boolean;
+  licenseRemovalRequested?: boolean;
+  licenseRemoved?: boolean;
+  movedToTerminatedOu?: boolean;
+  machineCollected?: boolean;
+  glpiUpdated?: boolean;
+  responsible?: string;
 }
