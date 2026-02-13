@@ -17,6 +17,7 @@ import { getTerminatedEmployees } from '@/lib/storage';
 import { compareUsers, calculateUserStats, exportUsersToCSV } from '@/lib/users';
 import { UserComparison, UserComplianceStatus, JumpCloudUser, WarpUser } from '@/types/inventory';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 export default function UsersPage() {
     const [users, setUsers] = useState<UserComparison[]>([]);
@@ -26,6 +27,21 @@ export default function UsersPage() {
 
     useEffect(() => {
         loadUsers();
+
+        const channel = supabase
+            .channel('users-page-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'terminated_employees' },
+                () => {
+                    loadUsers();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const loadUsers = async () => {

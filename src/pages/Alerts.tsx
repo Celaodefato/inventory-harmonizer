@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 import { OffboardingAlertCard } from '@/components/offboarding/OffboardingAlertCard';
 import { OffboardingDetailModal } from '@/components/offboarding/OffboardingDetailModal';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -56,11 +57,34 @@ const AlertsPage = forwardRef<HTMLDivElement>((_, ref) => {
   const loadAlerts = async () => {
     const sAlerts = await getAlerts();
     setAlerts(sAlerts);
-    setOffboardingAlerts(getOffboardingAlerts());
+    const oAlerts = await getOffboardingAlerts();
+    setOffboardingAlerts(oAlerts);
   };
 
   useEffect(() => {
     loadAlerts();
+
+    const channel = supabase
+      .channel('alerts-page-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'alerts' },
+        () => {
+          loadAlerts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'offboarding_alerts' },
+        () => {
+          loadAlerts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleClearAlerts = async () => {

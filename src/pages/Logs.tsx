@@ -6,6 +6,7 @@ import { SyncLog } from '@/types/inventory';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 
 const statusIcons = {
   success: CheckCircle2,
@@ -34,6 +35,21 @@ const LogsPage = forwardRef<HTMLDivElement>((_, ref) => {
       setLogs(savedLogs);
     };
     loadLogs();
+
+    const channel = supabase
+      .channel('logs-page-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sync_logs' },
+        () => {
+          loadLogs();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const formatTimestamp = (timestamp: string) => {

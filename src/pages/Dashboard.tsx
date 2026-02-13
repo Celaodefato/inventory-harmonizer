@@ -97,10 +97,16 @@ export default function Dashboard() {
       )
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'sync_logs' },
-        (payload) => {
-          const newLog = payload.new as any;
-          setSyncStatus(prev => ({ ...prev, lastSync: newLog.timestamp }));
+        { event: '*', schema: 'public', table: 'sync_logs' },
+        () => {
+          getLastSync().then(timestamp => setSyncStatus(prev => ({ ...prev, lastSync: timestamp })));
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'terminated_employees' },
+        () => {
+          handleSync(); // Re-run comparison when employees change
         }
       )
       .subscribe();
