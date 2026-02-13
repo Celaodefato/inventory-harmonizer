@@ -60,7 +60,6 @@ export default function Dashboard() {
 
   // Calculate non-compliance count based on new hostname-aware logic
   const nonComplianceCount = comparison?.nonCompliant.length || 0;
-  const namingViolationCount = comparison?.namingViolations.length || 0;
 
   useEffect(() => {
     const loadData = async () => {
@@ -337,10 +336,6 @@ export default function Dashboard() {
               Servidores
               {comparison?.servers && <Badge variant="secondary" className="ml-2 text-xs">{comparison.servers.length}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="naming" className={namingViolationCount > 0 ? "text-destructive" : ""}>
-              Nomenclatura
-              {namingViolationCount > 0 && <Badge variant="destructive" className="ml-2 text-xs">{namingViolationCount}</Badge>}
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6 animate-fade-in">
@@ -401,21 +396,6 @@ export default function Dashboard() {
           <TabsContent value="servers" className="space-y-6 animate-fade-in">
             {comparison && (
               <ComparisonTable endpoints={comparison.servers} title="Servidores e Outros Devices" />
-            )}
-          </TabsContent>
-
-          <TabsContent value="naming" className="space-y-6 animate-fade-in">
-            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-              <h3 className="text-lg font-semibold text-destructive flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5" />
-                Violações de Nomenclatura
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                Dispositivos classificados como Workstation mas que fogem do padrão <code>EXA-ARKLX/NT/MAC</code>.
-              </p>
-            </div>
-            {comparison && (
-              <ComparisonTable endpoints={comparison.namingViolations} title="Hosts Fora do Padrão" />
             )}
           </TabsContent>
         </Tabs>
