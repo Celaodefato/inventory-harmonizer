@@ -15,7 +15,7 @@ app.use(express.json());
 
 // Basic health check (Public)
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date(), message: 'Inventario EXA API v2.0' });
+    res.json({ status: 'ok', timestamp: new Date(), message: 'Inventário EXA API v2.0' });
 });
 
 // Protect all other routes
