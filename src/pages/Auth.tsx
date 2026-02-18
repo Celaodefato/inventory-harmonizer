@@ -64,7 +64,7 @@ export default function Login() {
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
             <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur-sm">
                 <CardHeader className="text-center space-y-1">
-                    <CardTitle className="text-3xl font-bold tracking-tight">Compliance Harmonizer</CardTitle>
+                    <CardTitle className="text-3xl font-bold tracking-tight">Inventario EXA</CardTitle>
                     <CardDescription>
                         Acesse o portal de conformidade de endpoints
                     </CardDescription>

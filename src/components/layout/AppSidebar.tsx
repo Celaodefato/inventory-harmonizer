@@ -31,8 +31,8 @@ export function AppSidebar() {
             <Server className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground uppercase">Inventory</h1>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80 font-medium">Harmonizer</p>
+            <h1 className="text-sm font-bold tracking-tight text-sidebar-foreground uppercase">Inventario</h1>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80 font-medium font-bold text-primary">EXA</p>
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-# Inventory Harmonizer
+# Inventário EXA
 
 Uma ferramenta para reconciliação de inventário de segurança entre múltiplas fontes.
 
