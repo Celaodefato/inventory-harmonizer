@@ -18,7 +18,9 @@ export function compareUsers(
     // Process JumpCloud users
     jumpCloudUsers.forEach(jcUser => {
         const email = jcUser.email.toLowerCase();
-        const name = `${jcUser.firstname} ${jcUser.lastname}`.trim();
+        let name = `${jcUser.firstname || ''} ${jcUser.lastname || ''}`.trim();
+        if (!name) name = jcUser.email.split('@')[0];
+
         const isTerminated = terminatedEmails.has(email);
 
         let jumpCloudStatus: 'active' | 'suspended' | 'terminated' = 'active';
@@ -36,7 +38,7 @@ export function compareUsers(
             jumpCloudStatus,
             warpDeviceCount: 0,
             isTerminated,
-            complianceStatus: 'missing_warp' // Will be updated if found in Warp
+            complianceStatus: 'missing_warp'
         });
     });
 

@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { parseCsv } from '@/lib/csv';
+import { parseCsv, parseJumpCloudUsersCsv, parseWarpUsersCsv } from '@/lib/csv';
 import { saveCsvData, CsvMetadata, CsvData } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -51,7 +51,17 @@ export function CsvUploadCard({
 
         reader.onload = async (event) => {
             const text = event.target?.result as string;
-            const result = parseCsv(text, tool.toLowerCase());
+
+            // Use dedicated parsers for user CSVs
+            let result;
+            if (tool === 'jumpcloud_users') {
+                result = parseJumpCloudUsersCsv(text);
+            } else if (tool === 'warp' && text.toLowerCase().includes('active device count')) {
+                // Warp users CSV (different from Warp devices CSV)
+                result = parseWarpUsersCsv(text);
+            } else {
+                result = parseCsv(text, tool.toLowerCase());
+            }
 
             if (result.error) {
                 toast({
@@ -134,7 +144,12 @@ export function CsvUploadCard({
                                         {isProcessing ? 'PROCESSANDO...' : 'CLIQUE PARA IMPORTAR CSV'}
                                     </p>
                                     <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-tight max-w-[200px] mx-auto">
-                                        Vínculo obrigatório: <b>hostname</b>
+                                        {tool === 'jumpcloud_users'
+                                            ? <>Colunas: <b>Email</b>, Firstname, Lastname, State</>
+                                            : tool === 'warp'
+                                                ? <>Colunas: <b>Email</b>, Active Device Count</>
+                                                : <>Vínculo obrigatório: <b>hostname</b></>
+                                        }
                                     </p>
                                 </div>
                             </button>

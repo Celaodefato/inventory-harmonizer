@@ -18,12 +18,14 @@ import { compareUsers, calculateUserStats, exportUsersToCSV } from '@/lib/users'
 import { UserComparison, UserComplianceStatus, JumpCloudUser, WarpUser } from '@/types/inventory';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function UsersPage() {
     const [users, setUsers] = useState<UserComparison[]>([]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<UserComplianceStatus | 'all'>('all');
     const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
 
     useEffect(() => {
         loadUsers();
@@ -33,6 +35,13 @@ export default function UsersPage() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'terminated_employees' },
+                () => {
+                    loadUsers();
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'inventory_data' },
                 () => {
                     loadUsers();
                 }
@@ -51,12 +60,20 @@ export default function UsersPage() {
             const terminatedEmployees = await getTerminatedEmployees();
 
             // Parse JumpCloud users from CSV
-            const jumpCloudUsers: JumpCloudUser[] = csvData.jumpcloud_users || [];
+            const jumpCloudUsers: JumpCloudUser[] = (csvData.jumpcloud_users || []).map((row: any) => ({
+                email: row.email || row.Email || row.username || '',
+                firstname: row.firstname || row['first name'] || '',
+                lastname: row.lastname || row['last name'] || '',
+                state: row.state || 'ACTIVATED'
+            })).filter(u => u.email);
 
-            // Parse Warp users from CSV
-            const warpUsers: WarpUser[] = (csvData.warp || []).map((row: any) => ({
-                email: row.Email || row.email || '',
-                activeDeviceCount: parseInt(row['Active Device Count'] || row.activeDeviceCount || '0', 10)
+            // Parse Warp users from CSV (supports both 'warp_users' and 'warp' keys)
+            const rawWarpUsers = (csvData as any).warp_users || csvData.warp || [];
+            const warpUsers: WarpUser[] = rawWarpUsers.map((row: any) => ({
+                email: row.email || row.Email || '',
+                activeDeviceCount: typeof row.activeDeviceCount === 'number'
+                    ? row.activeDeviceCount
+                    : parseInt(row.activeDeviceCount || row['active device count'] || '0', 10)
             })).filter((u: WarpUser) => u.email);
 
             const comparedUsers = compareUsers(jumpCloudUsers, warpUsers, terminatedEmployees);
@@ -83,12 +100,27 @@ export default function UsersPage() {
     }, [users, search, statusFilter]);
 
     const handleExport = () => {
-        const csv = exportUsersToCSV(filteredUsers);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `usuarios_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
+        if (filteredUsers.length === 0) return;
+
+        try {
+            const csv = exportUsersToCSV(filteredUsers);
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `usuarios_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export error:', error);
+            toast({
+                title: 'Erro na exportação',
+                description: 'Não foi possível gerar o arquivo CSV.',
+                variant: 'destructive',
+            });
+        }
     };
 
     const getStatusBadge = (status: UserComplianceStatus) => {
