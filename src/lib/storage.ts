@@ -351,7 +351,9 @@ export async function getCsvData(): Promise<CsvData> {
     if (error) throw error;
 
     const result = { ...defaultCsvData };
+    console.log('[Debug] Registros lidos do Supabase:', data?.length);
     data?.forEach((item: any) => {
+      console.log('[Debug] Ferramenta encontrada no DB:', item.tool_name);
       if (item.tool_name && item.tool_name in result) {
         (result as any)[item.tool_name] = item.raw_data || [];
       }
@@ -377,7 +379,11 @@ export async function saveCsvData(tool: keyof CsvData, data: any[] | null, metad
     }
 
     const { error } = await supabase.from('inventory_data').upsert(update, { onConflict: 'tool_name' });
-    if (error) throw error;
+    if (error) {
+      console.error('[Debug] Erro ao salvar dados no Supabase:', error.message);
+      throw error;
+    }
+    console.log('[Debug] Dados salvos com sucesso para:', tool);
   } catch (error) {
     console.error('Error saving CSV data to Supabase:', error);
   }
