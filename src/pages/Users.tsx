@@ -59,6 +59,10 @@ export default function UsersPage() {
             const csvData = await getCsvData();
             const terminatedEmployees = await getTerminatedEmployees();
 
+            console.log('[Debug] Dados CSV carregados:', Object.keys(csvData).filter(k => (csvData as any)[k]));
+            console.log('[Debug] JumpCloud Users Raw:', csvData.jumpcloud_users?.length);
+            console.log('[Debug] Warp Users Raw:', csvData.warp?.length);
+
             // Parse JumpCloud users from CSV
             const jumpCloudUsers: JumpCloudUser[] = (csvData.jumpcloud_users || []).map((row: any) => ({
                 email: row.email || row.Email || row.username || '',
@@ -75,7 +79,11 @@ export default function UsersPage() {
                     : parseInt(row.activeDeviceCount || row['active device count'] || '0', 10)
             })).filter((u: WarpUser) => u.email);
 
+            console.log('[Debug] JumpCloud Users Processed:', jumpCloudUsers.length);
+            console.log('[Debug] Warp Users Processed:', warpUsers.length);
+
             const comparedUsers = compareUsers(jumpCloudUsers, warpUsers, terminatedEmployees);
+            console.log('[Debug] Usuários comparados:', comparedUsers.length);
             setUsers(comparedUsers);
         } catch (error) {
             console.error('Error loading users:', error);
