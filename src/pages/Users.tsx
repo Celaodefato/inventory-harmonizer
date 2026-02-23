@@ -67,9 +67,8 @@ export default function UsersPage() {
                 state: row.state || 'ACTIVATED'
             })).filter(u => u.email);
 
-            // Parse Warp users from CSV (supports both 'warp_users' and 'warp' keys)
-            const rawWarpUsers = (csvData as any).warp_users || csvData.warp || [];
-            const warpUsers: WarpUser[] = rawWarpUsers.map((row: any) => ({
+            // Parse Warp users from CSV (saved under 'warp' key)
+            const warpUsers: WarpUser[] = (csvData.warp || []).map((row: any) => ({
                 email: row.email || row.Email || '',
                 activeDeviceCount: typeof row.activeDeviceCount === 'number'
                     ? row.activeDeviceCount

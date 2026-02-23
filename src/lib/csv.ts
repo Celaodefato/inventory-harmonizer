@@ -344,5 +344,5 @@ export function parseWarpUsersCsv(content: string): ParsedCsvResult {
         return { data: [], count: 0, error: 'Nenhum usuário válido encontrado. Verifique se a coluna "Email" existe no arquivo.' };
     }
 
-    return { data, count: data.length, detectedType: 'warp_users' };
+    return { data, count: data.length, detectedType: 'warp' };
 }
