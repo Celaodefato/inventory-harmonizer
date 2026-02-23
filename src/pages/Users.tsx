@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Users as UsersIcon, Download, Search, CheckCircle2, AlertCircle, XCircle, User } from 'lucide-react';
+import { Users as UsersIcon, Download, Upload, Search, CheckCircle2, AlertCircle, XCircle, User, FileText } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,18 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getCsvData } from '@/lib/storage';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { getCsvData, saveCsvData } from '@/lib/storage';
 import { getTerminatedEmployees } from '@/lib/storage';
+import { parseJumpCloudUsersCsv, parseWarpUsersCsv } from '@/lib/csv';
 import { compareUsers, calculateUserStats, exportUsersToCSV } from '@/lib/users';
 import { UserComparison, UserComplianceStatus, JumpCloudUser, WarpUser } from '@/types/inventory';
 import { cn } from '@/lib/utils';
@@ -25,6 +35,8 @@ export default function UsersPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<UserComplianceStatus | 'all'>('all');
     const [isLoading, setIsLoading] = useState(true);
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -130,6 +142,72 @@ export default function UsersPage() {
         }
     };
 
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, tool: 'jumpcloud_users' | 'warp') => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsProcessing(true);
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            const text = e.target?.result as string;
+            let result;
+
+            if (tool === 'jumpcloud_users') {
+                result = parseJumpCloudUsersCsv(text);
+            } else {
+                result = parseWarpUsersCsv(text);
+            }
+
+            if (result.error) {
+                toast({
+                    title: 'Erro no arquivo',
+                    description: result.error,
+                    variant: 'destructive',
+                });
+                setIsProcessing(false);
+                return;
+            }
+
+            try {
+                await saveCsvData(tool === 'warp' ? 'warp' : 'jumpcloud_users', result.data, {
+                    tool: tool === 'warp' ? 'warp' : 'jumpcloud_users',
+                    filename: file.name,
+                    timestamp: new Date().toISOString(),
+                    count: result.count
+                });
+
+                toast({
+                    title: 'Sucesso!',
+                    description: `${file.name} importado com sucesso (${result.count} usuários).`,
+                });
+
+                // loadUsers will be triggered by supabase subscription
+            } catch (err) {
+                toast({
+                    title: 'Erro ao salvar',
+                    description: 'Não foi possível persistir os dados no banco.',
+                    variant: 'destructive',
+                });
+            } finally {
+                setIsProcessing(false);
+                // Clear input
+                event.target.value = '';
+            }
+        };
+
+        reader.onerror = () => {
+            toast({
+                title: 'Erro na leitura',
+                description: 'Não foi possível ler o arquivo selecionado.',
+                variant: 'destructive',
+            });
+            setIsProcessing(false);
+        };
+
+        reader.readAsText(file);
+    };
+
     const getStatusBadge = (status: UserComplianceStatus) => {
         switch (status) {
             case 'compliant':
@@ -184,10 +262,102 @@ export default function UsersPage() {
                             Comparação entre JumpCloud e Warp
                         </p>
                     </div>
-                    <Button onClick={handleExport} disabled={filteredUsers.length === 0}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Exportar CSV
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline">
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    Importar CSV
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                                <DialogHeader>
+                                    <DialogTitle>Importar Dados de Usuários</DialogTitle>
+                                    <DialogDescription>
+                                        Selecione os arquivos CSV para comparar os inventários.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <div className="grid gap-6 py-4">
+                                    {/* JumpCloud Upload */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-sm font-medium leading-none">JumpCloud (Users)</label>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Colunas: Email, Nome</span>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                accept=".csv"
+                                                id="jc-upload"
+                                                className="hidden"
+                                                onChange={(e) => handleFileUpload(e, 'jumpcloud_users')}
+                                                disabled={isProcessing}
+                                            />
+                                            <Button
+                                                variant="secondary"
+                                                className="w-full justify-start border-2 border-dashed h-16 hover:border-primary/50 transition-all"
+                                                onClick={() => document.getElementById('jc-upload')?.click()}
+                                                disabled={isProcessing}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-blue-500/10 p-2 rounded-lg text-blue-500">
+                                                        <FileText className="h-5 w-5" />
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <p className="text-xs font-bold uppercase">Clique para selecionar</p>
+                                                        <p className="text-[10px] text-muted-foreground">CSV exportado do JumpCloud Users</p>
+                                                    </div>
+                                                </div>
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Warp Upload */}
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-sm font-medium leading-none">Warp (Usuários)</label>
+                                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Colunas: Email, Dispositivos</span>
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="file"
+                                                accept=".csv"
+                                                id="warp-upload"
+                                                className="hidden"
+                                                onChange={(e) => handleFileUpload(e, 'warp')}
+                                                disabled={isProcessing}
+                                            />
+                                            <Button
+                                                variant="secondary"
+                                                className="w-full justify-start border-2 border-dashed h-16 hover:border-primary/50 transition-all"
+                                                onClick={() => document.getElementById('warp-upload')?.click()}
+                                                disabled={isProcessing}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-purple-500/10 p-2 rounded-lg text-purple-500">
+                                                        <FileText className="h-5 w-5" />
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <p className="text-xs font-bold uppercase">Clique para selecionar</p>
+                                                        <p className="text-[10px] text-muted-foreground">CSV exportado do Warp</p>
+                                                    </div>
+                                                </div>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <DialogFooter>
+                                    <Button variant="ghost" onClick={() => setIsImportDialogOpen(false)}>Fechar</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+
+                        <Button onClick={handleExport} disabled={filteredUsers.length === 0}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Exportar CSV
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
