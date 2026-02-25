@@ -18,6 +18,7 @@ import {
   generateAlerts,
 } from '@/lib/inventory';
 import {
+  getApiConfig,
   getLastSync,
   setLastSync,
   getAlerts,
@@ -124,17 +125,20 @@ export default function Dashboard() {
   }, []);
 
   const handleSync = useCallback(async () => {
-    setSyncStatus({ isLoading: true, lastSync: syncStatus.lastSync, status: 'syncing' });
+    if (syncStatus.isLoading && syncStatus.status === 'syncing') return;
+
+    setSyncStatus(prev => ({ ...prev, isLoading: true, status: 'syncing' }));
 
     try {
+      const apiConfig = await getApiConfig();
       const terminatedEmployees = await getTerminatedEmployees();
 
       const [vicariusData, cortexData, warpData, pamData, jumpcloudData] = await Promise.all([
-        fetchVicariusEndpoints(),
-        fetchCortexEndpoints(),
-        fetchWarpEndpoints(),
-        fetchPamEndpoints(),
-        fetchJumpcloudEndpoints(),
+        fetchVicariusEndpoints(apiConfig),
+        fetchCortexEndpoints(apiConfig),
+        fetchWarpEndpoints(apiConfig),
+        fetchPamEndpoints(apiConfig),
+        fetchJumpcloudEndpoints(apiConfig),
       ]);
 
       setEndpointCounts({
@@ -197,7 +201,7 @@ export default function Dashboard() {
         },
       };
       await addSyncLog(log);
-      setLastSync(timestamp);
+      await setLastSync(timestamp);
 
       setSyncStatus({
         isLoading: false,
@@ -239,7 +243,7 @@ export default function Dashboard() {
         variant: 'destructive',
       });
     }
-  }, [syncStatus.lastSync, toast]);
+  }, [syncStatus.isLoading, syncStatus.status, syncStatus.lastSync, toast]);
 
   useEffect(() => {
     if (!comparison) {

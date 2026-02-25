@@ -1,4 +1,4 @@
-import { Endpoint, NormalizedEndpoint, ComparisonResult, Alert, TerminatedEmployee } from '@/types/inventory';
+import { Endpoint, NormalizedEndpoint, ComparisonResult, Alert, TerminatedEmployee, ApiConfig } from '@/types/inventory';
 import {
   mockVicariusEndpoints,
   mockCortexEndpoints,
@@ -8,17 +8,15 @@ import {
 } from '@/data/mockData';
 import { getApiConfig, getTerminatedEmployees, getCsvData } from './storage';
 
-// Helper to check config async
-async function isApiConfiguredAsync(tool: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud'): Promise<boolean> {
-  const config = await getApiConfig();
+// Helper to check config sync-style (offline/mock check)
+function isApiConfigured(config: ApiConfig, tool: keyof ApiConfig): boolean {
   if (tool === 'vicarius') return !!(config.vicarius.baseUrl && config.vicarius.apiKey);
-  if (tool === 'cortex') return !!(config.cortex.baseUrl && config.cortex.apiToken);
-  if (tool === 'warp') return !!(config.warp.baseUrl && config.warp.apiToken);
-  if (tool === 'pam') return !!(config.pam.baseUrl && config.pam.apiToken);
-  return !!(config.jumpcloud.baseUrl && config.jumpcloud.apiToken);
+  const toolConfig = config[tool] as { baseUrl: string; apiToken?: string };
+  return !!(toolConfig?.baseUrl && toolConfig?.apiToken);
 }
 
-function normalizeHostname(hostname: string): string {
+function normalizeHostname(hostname: string | null | undefined): string {
+  if (!hostname) return 'unknown-device';
   return hostname.toLowerCase().trim();
 }
 
@@ -84,17 +82,14 @@ export function getEndpointRiskDetails(endpoint: NormalizedEndpoint): { level: N
   return { level: 'none', reason: null };
 }
 
-export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
-  const configured = await isApiConfiguredAsync('vicarius');
+export async function fetchVicariusEndpoints(config: ApiConfig): Promise<Endpoint[]> {
+  const configured = isApiConfigured(config, 'vicarius');
   if (!configured) {
     const csvData = (await getCsvData()).vicarius;
     if (csvData && csvData.length > 0) return csvData;
-
-    // Return empty instead of mock data
     return [];
   }
 
-  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.vicarius.baseUrl}/api/endpoints`, {
       headers: {
@@ -108,31 +103,29 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
     const data = await response.json();
     return data.map((item: any) => ({
       id: item.id || item.uuid,
-      hostname: item.hostname || item.name,
-      ip: item.ip || item.ipAddress,
-      uuid: item.uuid || item.id,
-      os: item.os || item.operatingSystem,
-      lastSeen: item.lastSeen || item.lastSeenAt,
+      hostname: item.hostname || item.name || '',
+      ip: item.ip || item.ipAddress || '',
+      uuid: item.uuid || item.id || '',
+      os: item.os || item.operatingSystem || '',
+      lastSeen: item.lastSeen || item.lastSeenAt || '',
       source: 'vicarius' as const,
       origin: 'api' as const,
-      userEmail: item.userEmail || item.user_email,
+      userEmail: item.userEmail || item.user_email || '',
     }));
   } catch (error) {
     console.error('Error fetching from Vicarius:', error);
-    return []; // Return empty instead of throwing to allow other sources to sync
+    return [];
   }
 }
 
-export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
-  const configured = await isApiConfiguredAsync('cortex');
+export async function fetchCortexEndpoints(config: ApiConfig): Promise<Endpoint[]> {
+  const configured = isApiConfigured(config, 'cortex');
   if (!configured) {
     const csvData = (await getCsvData()).cortex;
     if (csvData && csvData.length > 0) return csvData;
-
     return [];
   }
 
-  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.cortex.baseUrl}/api/v1/endpoints`, {
       headers: {
@@ -145,32 +138,30 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
 
     const data = await response.json();
     return data.map((item: any) => ({
-      id: item.id || item.endpoint_id,
-      hostname: item.hostname || item.endpoint_name,
-      ip: item.ip || item.ip_address,
-      uuid: item.uuid || item.endpoint_id,
-      os: item.os || item.platform,
-      lastSeen: item.lastSeen || item.last_seen,
+      id: item.id || item.endpoint_id || '',
+      hostname: item.hostname || item.endpoint_name || '',
+      ip: item.ip || item.ip_address || '',
+      uuid: item.uuid || item.endpoint_id || '',
+      os: item.os || item.platform || '',
+      lastSeen: item.lastSeen || item.last_seen || '',
       source: 'cortex' as const,
       origin: 'api' as const,
-      userEmail: item.userEmail || item.user_email,
+      userEmail: item.userEmail || item.user_email || '',
     }));
   } catch (error) {
     console.error('Error fetching from Cortex:', error);
-    return []; // Return empty instead of throwing
+    return [];
   }
 }
 
-export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
-  const configured = await isApiConfiguredAsync('warp');
+export async function fetchWarpEndpoints(config: ApiConfig): Promise<Endpoint[]> {
+  const configured = isApiConfigured(config, 'warp');
   if (!configured) {
     const csvData = (await getCsvData()).warp;
     if (csvData && csvData.length > 0) return csvData;
-
     return [];
   }
 
-  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.warp.baseUrl}/v1/devices`, {
       headers: {
@@ -183,32 +174,30 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
 
     const data = await response.json();
     return data.map((item: any) => ({
-      id: item.id || item.device_id,
-      hostname: item.hostname || item.device_name,
-      ip: item.ip || item.ipv4,
-      uuid: item.uuid || item.device_id,
-      os: item.os || item.os_type,
-      lastSeen: item.lastSeen || item.last_connected,
+      id: item.id || item.device_id || '',
+      hostname: item.hostname || item.device_name || '',
+      ip: item.ip || item.ipv4 || '',
+      uuid: item.uuid || item.device_id || '',
+      os: item.os || item.os_type || '',
+      lastSeen: item.lastSeen || item.last_connected || '',
       source: 'warp' as const,
       origin: 'api' as const,
-      userEmail: item.userEmail || item.user_email,
+      userEmail: item.userEmail || item.user_email || '',
     }));
   } catch (error) {
     console.error('Error fetching from Warp:', error);
-    return []; // Return empty instead of throwing
+    return [];
   }
 }
 
-export async function fetchPamEndpoints(): Promise<Endpoint[]> {
-  const configured = await isApiConfiguredAsync('pam');
+export async function fetchPamEndpoints(config: ApiConfig): Promise<Endpoint[]> {
+  const configured = isApiConfigured(config, 'pam');
   if (!configured) {
     const csvData = (await getCsvData()).pam;
     if (csvData && csvData.length > 0) return csvData;
-
     return [];
   }
 
-  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.pam.baseUrl}/api/assets`, {
       headers: {
@@ -221,32 +210,30 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
 
     const data = await response.json();
     return data.map((item: any) => ({
-      id: item.id || item.asset_id,
+      id: item.id || item.asset_id || '',
       hostname: item.hostname || item.asset_name || item.name || '',
       ip: item.ip || item.ip_address || '',
-      uuid: item.uuid || item.asset_id || item.id,
-      os: item.os || item.operating_system,
-      lastSeen: item.lastSeen || item.last_access,
+      uuid: item.uuid || item.asset_id || item.id || '',
+      os: item.os || item.operating_system || '',
+      lastSeen: item.lastSeen || item.last_access || '',
       source: 'pam' as const,
       origin: 'api' as const,
-      userEmail: item.userEmail || item.owner_email,
+      userEmail: item.userEmail || item.owner_email || '',
     }));
   } catch (error) {
     console.error('Error fetching from PAM:', error);
-    return []; // Return empty instead of throwing
+    return [];
   }
 }
 
-export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
-  const configured = await isApiConfiguredAsync('jumpcloud');
+export async function fetchJumpcloudEndpoints(config: ApiConfig): Promise<Endpoint[]> {
+  const configured = isApiConfigured(config, 'jumpcloud');
   if (!configured) {
     const csvData = (await getCsvData()).jumpcloud;
     if (csvData && csvData.length > 0) return csvData;
-
     return [];
   }
 
-  const config = await getApiConfig();
   try {
     const response = await fetch(`${config.jumpcloud.baseUrl}/api/systems`, {
       headers: {
@@ -259,19 +246,19 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
 
     const data = await response.json();
     return data.map((item: any) => ({
-      id: item.id,
-      hostname: item.hostname,
-      ip: item.ip_address,
-      uuid: item.id,
-      os: item.os,
-      lastSeen: item.last_seen,
+      id: item.id || '',
+      hostname: item.hostname || '',
+      ip: item.ip_address || '',
+      uuid: item.id || '',
+      os: item.os || '',
+      lastSeen: item.last_seen || '',
       source: 'jumpcloud' as const,
       origin: 'api' as const,
-      userEmail: item.user_email,
+      userEmail: item.user_email || '',
     }));
   } catch (error) {
     console.error('Error fetching from JumpCloud:', error);
-    return []; // Return empty instead of throwing
+    return [];
   }
 }
 
@@ -288,19 +275,21 @@ export function compareInventories(
   // 1. Normalize and Merge
   const processEndpoints = (endpoints: Endpoint[], source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud') => {
     endpoints.forEach(ep => {
+      if (!ep.hostname || ep.hostname.trim() === '') return; // Skip invalid devices
+
       const h = normalizeHostname(ep.hostname);
-      const uuid = ep.hostname.toLowerCase(); // Simple unique key for now
+      const uuid = h; // Use normalized hostname as key for merging
 
       if (!map.has(uuid)) {
         map.set(uuid, {
           hostname: ep.hostname, // Keep original case for display
-          ip: ep.ip,
+          ip: ep.ip || '',
           uuid: uuid,
-          os: ep.os,
-          lastSeen: ep.lastSeen,
+          os: ep.os || '',
+          lastSeen: ep.lastSeen || '',
           sources: [source],
           sourceOrigins: { [source]: ep.origin },
-          userEmail: ep.userEmail,
+          userEmail: ep.userEmail || '',
           userId: ep.userId,
           riskLevel: 'none'
         });
