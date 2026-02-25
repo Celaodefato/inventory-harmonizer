@@ -371,12 +371,9 @@ export async function saveCsvData(tool: keyof CsvData, data: any[] | null, metad
       tool_name: tool,
       raw_data: data || [],
       updated_at: new Date().toISOString(),
+      filename: metadata ? metadata.filename : null,
+      record_count: metadata ? metadata.count : 0,
     };
-
-    if (metadata) {
-      update.filename = metadata.filename;
-      update.record_count = metadata.count;
-    }
 
     const { error } = await supabase.from('inventory_data').upsert(update, { onConflict: 'tool_name' });
     if (error) {
@@ -399,10 +396,11 @@ export async function getCsvMetadata(): Promise<Record<string, CsvMetadata | nul
     };
 
     data?.forEach((item: any) => {
-      if (item.tool_name && item.tool_name in result) {
+      // Only treat as valid metadata if there is a filename and data
+      if (item.tool_name && item.tool_name in result && item.filename) {
         result[item.tool_name] = {
           tool: item.tool_name as keyof CsvData,
-          filename: item.filename || 'Arquivo desconhecido',
+          filename: item.filename,
           timestamp: item.updated_at,
           count: item.record_count || 0
         };
