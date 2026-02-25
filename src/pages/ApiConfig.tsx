@@ -85,56 +85,7 @@ export default function ApiConfigPage() {
           </p>
         </div>
 
-        {/* Info Banner */}
-        <div className="mb-10 rounded-xl border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-5 backdrop-blur-sm">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-semibold text-foreground">
-                  Sobre o modo de demonstração
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                    Status Supabase:
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-green-500 uppercase">Configurado</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Enquanto as APIs não estiverem configuradas, o sistema utilizará dados mockados para
-                demonstração. Configure as credenciais abaixo para conectar às APIs reais. Cada ferramenta pode ser
-                configurada individualmente.
-              </p>
 
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-[10px] font-bold uppercase tracking-widest border-primary/30 hover:bg-primary/5"
-                  onClick={async () => {
-                    try {
-                      const { supabase } = await import('@/lib/supabase');
-                      const { data, error } = await supabase.from('inventory_data').select('count', { count: 'exact', head: true });
-                      if (error) throw error;
-                      alert('✅ Conexão com Supabase está ativa e funcional!');
-                    } catch (e: any) {
-                      alert('❌ Erro de comunicação com Supabase: ' + (e.message || 'Erro desconhecido'));
-                      console.error(e);
-                    }
-                  }}
-                >
-                  Testar Comunicação
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* API Configuration Cards */}
         <div className="mb-16">

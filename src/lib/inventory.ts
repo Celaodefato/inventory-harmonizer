@@ -119,7 +119,7 @@ export async function fetchVicariusEndpoints(): Promise<Endpoint[]> {
     }));
   } catch (error) {
     console.error('Error fetching from Vicarius:', error);
-    throw error;
+    return []; // Return empty instead of throwing to allow other sources to sync
   }
 }
 
@@ -157,7 +157,7 @@ export async function fetchCortexEndpoints(): Promise<Endpoint[]> {
     }));
   } catch (error) {
     console.error('Error fetching from Cortex:', error);
-    throw error;
+    return []; // Return empty instead of throwing
   }
 }
 
@@ -195,7 +195,7 @@ export async function fetchWarpEndpoints(): Promise<Endpoint[]> {
     }));
   } catch (error) {
     console.error('Error fetching from Warp:', error);
-    throw error;
+    return []; // Return empty instead of throwing
   }
 }
 
@@ -233,7 +233,7 @@ export async function fetchPamEndpoints(): Promise<Endpoint[]> {
     }));
   } catch (error) {
     console.error('Error fetching from PAM:', error);
-    throw error;
+    return []; // Return empty instead of throwing
   }
 }
 
@@ -271,7 +271,7 @@ export async function fetchJumpcloudEndpoints(): Promise<Endpoint[]> {
     }));
   } catch (error) {
     console.error('Error fetching from JumpCloud:', error);
-    throw error;
+    return []; // Return empty instead of throwing
   }
 }
 
