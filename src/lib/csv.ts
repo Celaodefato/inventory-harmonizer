@@ -109,9 +109,6 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 
     // Identify UUID column once
     const uuidCol = headers.find(h => ['uuid', 'id', 'device_id', 'agent id'].includes(h));
-    if (!uuidCol && detectedType !== 'jumpcloud_users' && detectedType !== 'warp') {
-        return { data: [], count: 0, error: 'Formato inválido: Coluna uuid não encontrada.' };
-    }
 
     for (let i = 1; i < lines.length; i++) {
         // Parse row with custom delimiter logic
