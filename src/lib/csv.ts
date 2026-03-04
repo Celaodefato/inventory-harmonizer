@@ -67,12 +67,42 @@ const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[
     }
 };
 
+function splitCsvText(content: string): string[] {
+    const rows: string[] = [];
+    let currentRow = '';
+    let inQuote = false;
+
+    for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+
+        if (char === '"') {
+            inQuote = !inQuote;
+        }
+
+        if ((char === '\n' || char === '\r') && !inQuote) {
+            if (char === '\r' && content[i + 1] === '\n') {
+                i++; // skip \n of \r\n flag
+            }
+            if (currentRow.trim() !== '') {
+                rows.push(currentRow);
+            }
+            currentRow = '';
+        } else {
+            currentRow += char;
+        }
+    }
+    if (currentRow.trim() !== '') {
+        rows.push(currentRow);
+    }
+    return rows;
+}
+
 export function parseCsv(content: string, requestedTool: string): ParsedCsvResult {
     if (!content || !content.trim()) {
         return { data: [], count: 0, error: 'Arquivo CSV vazio ou sem cabeçalho.' };
     }
 
-    const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
+    const lines = splitCsvText(content);
     if (lines.length < 2) {
         return { data: [], count: 0, error: 'Arquivo CSV vazio ou sem cabeçalho.' };
     }
@@ -298,7 +328,7 @@ function parseRow(text: string, delimiter: string): string[] {
 function parseGenericCsv(content: string): { headers: string[]; rows: Record<string, string>[] } | null {
     if (!content || !content.trim()) return null;
 
-    const lines = content.split(/\r?\n/).filter(l => l.trim() !== '');
+    const lines = splitCsvText(content);
     if (lines.length < 2) return null;
 
     const firstLine = lines[0];
