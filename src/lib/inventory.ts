@@ -340,6 +340,7 @@ export function compareInventories(
   // Aceita qualquer hostname que comece com EXA-ARK, EXA-MAC, ou MACBOOKPRO
   const isValidWorkstationName = (hostname: string) => {
     const h = hostname.toUpperCase();
+    if (h.startsWith('EXA-ARKLX')) return false; // Hard exception for Linux servers
     return h.startsWith('EXA-ARK') ||
       h.startsWith('EXA-MAC') ||
       h.startsWith('MACBOOKPRO');
@@ -349,6 +350,7 @@ export function compareInventories(
   // Servidores são dispositivos que NÃO seguem o padrão de workstation
   const isServer = (hostname: string) => {
     const upper = hostname.toUpperCase();
+    if (upper.startsWith('EXA-ARKLX')) return true; // Explicitly a server
     // Se começa com padrão de workstation, não é servidor
     return !upper.startsWith('EXA-ARK') &&
       !upper.startsWith('EXA-MAC') &&
@@ -357,11 +359,12 @@ export function compareInventories(
 
   allEndpoints.forEach(ep => {
     // 1. Classification
-    // Rule: SERVIDORES if in SenhaSegura (pam) OR Endpoint Type in Cortex is 'Server'
+    // Rule: SERVIDORES if in SenhaSegura (pam) OR Endpoint Type in Cortex is 'Server' OR hostname is a server (like EXA-ARKLX)
     const inPam = ep.sources.includes('pam');
     const isCortexServer = ep.endpointType === 'Server';
+    const isServerByName = ep.hostname.toUpperCase().startsWith('EXA-ARKLX');
 
-    if (inPam || isCortexServer) {
+    if (inPam || isCortexServer || isServerByName) {
       ep.classification = 'SERVIDORES';
       servers.push(ep);
     } else {
