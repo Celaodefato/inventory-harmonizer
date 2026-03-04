@@ -87,12 +87,18 @@ export function getEndpointRiskDetails(endpoint: NormalizedEndpoint): { level: N
   return { level: 'none', reason: null };
 }
 
+export function getEndpointsByEmail(email: string, allEndpoints: NormalizedEndpoint[]): NormalizedEndpoint[] {
+  if (!email || !allEndpoints) return [];
+  const lowerEmail = email.toLowerCase();
+  return allEndpoints.filter(e => e.userEmail?.toLowerCase() === lowerEmail);
+}
+
 export async function fetchVicariusEndpoints(config: ApiConfig): Promise<Endpoint[]> {
   const configured = isApiConfigured(config, 'vicarius');
   if (!configured) {
     const csvData = (await getCsvData()).vicarius;
     if (csvData && csvData.length > 0) return csvData;
-    return [];
+    return mockVicariusEndpoints;
   }
 
   try {
@@ -128,7 +134,7 @@ export async function fetchCortexEndpoints(config: ApiConfig): Promise<Endpoint[
   if (!configured) {
     const csvData = (await getCsvData()).cortex;
     if (csvData && csvData.length > 0) return csvData;
-    return [];
+    return mockCortexEndpoints;
   }
 
   try {
@@ -164,7 +170,7 @@ export async function fetchWarpEndpoints(config: ApiConfig): Promise<Endpoint[]>
   if (!configured) {
     const csvData = (await getCsvData()).warp;
     if (csvData && csvData.length > 0) return csvData;
-    return [];
+    return mockWarpEndpoints;
   }
 
   try {
@@ -200,7 +206,7 @@ export async function fetchPamEndpoints(config: ApiConfig): Promise<Endpoint[]> 
   if (!configured) {
     const csvData = (await getCsvData()).pam;
     if (csvData && csvData.length > 0) return csvData;
-    return [];
+    return mockPamEndpoints;
   }
 
   try {
@@ -236,7 +242,7 @@ export async function fetchJumpcloudEndpoints(config: ApiConfig): Promise<Endpoi
   if (!configured) {
     const csvData = (await getCsvData()).jumpcloud;
     if (csvData && csvData.length > 0) return csvData;
-    return [];
+    return mockJumpcloudEndpoints;
   }
 
   try {

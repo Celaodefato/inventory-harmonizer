@@ -20,9 +20,19 @@ import {
   addTerminatedEmployee,
   deleteTerminatedEmployee,
   updateTerminatedEmployee,
+  getApiConfig,
 } from '@/lib/storage';
+import {
+  fetchVicariusEndpoints,
+  fetchCortexEndpoints,
+  fetchWarpEndpoints,
+  fetchPamEndpoints,
+  fetchJumpcloudEndpoints,
+  compareInventories,
+  getEndpointsByEmail
+} from '@/lib/inventory';
 import { supabase } from '@/lib/supabase';
-import { TerminatedEmployee } from '@/types/inventory';
+import { TerminatedEmployee, NormalizedEndpoint } from '@/types/inventory';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -51,6 +61,8 @@ export default function TerminatedPage() {
     glpiUpdated: false,
   });
   const [search, setSearch] = useState('');
+  const [allEndpoints, setAllEndpoints] = useState<NormalizedEndpoint[]>([]);
+  const [isLoadingInventory, setIsLoadingInventory] = useState(false);
 
   const { toast } = useToast();
 
@@ -74,8 +86,31 @@ export default function TerminatedPage() {
   }, []);
 
   const loadEmployees = async () => {
-    const saved = await getTerminatedEmployees();
-    setEmployees(saved);
+    setIsLoadingInventory(true);
+    try {
+      const [savedEmployees, config] = await Promise.all([
+        getTerminatedEmployees(),
+        getApiConfig()
+      ]);
+
+      setEmployees(savedEmployees);
+
+      // Fetch all sources for comparison
+      const [vic, cor, warp, pam, jc] = await Promise.all([
+        fetchVicariusEndpoints(config),
+        fetchCortexEndpoints(config),
+        fetchWarpEndpoints(config),
+        fetchPamEndpoints(config),
+        fetchJumpcloudEndpoints(config)
+      ]);
+
+      const comparison = compareInventories(vic, cor, warp, pam, jc, savedEmployees);
+      setAllEndpoints(comparison.allEndpoints);
+    } catch (error) {
+      console.error('Error loading data for offboarding:', error);
+    } finally {
+      setIsLoadingInventory(false);
+    }
   };
 
   const resetForm = () => {
@@ -530,6 +565,28 @@ export default function TerminatedPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Active Endpoints Check */}
+                        {(() => {
+                          const active = getEndpointsByEmail(employee.email, allEndpoints);
+                          if (active.length === 0) return null;
+                          return (
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="flex h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                              <span className="text-[10px] font-bold text-destructive uppercase tracking-widest">
+                                {active.length === 1 ? '1 Dispositivo Ativo Detectado' : `${active.length} Dispositivos Ativos Detectados`}
+                              </span>
+                              <div className="flex gap-1 overflow-x-auto">
+                                {active.map(e => (
+                                  <span key={e.uuid} className="text-[9px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded border border-destructive/20 font-medium">
+                                    {e.hostname}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
                         {/* Progress Bar */}
                         <div className="mt-2 flex items-center gap-2">
                           <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">

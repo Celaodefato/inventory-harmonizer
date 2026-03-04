@@ -85,7 +85,7 @@ export default function UsersPage() {
 
             // Parse Warp users from CSV (saved under 'warp' key)
             const warpUsers: WarpUser[] = (csvData.warp || []).map((row: any) => ({
-                email: row.email || row.Email || '',
+                email: row.email || row.Email || row.userEmail || '',
                 activeDeviceCount: typeof row.activeDeviceCount === 'number'
                     ? row.activeDeviceCount
                     : parseInt(row.activeDeviceCount || row['active device count'] || '0', 10)
