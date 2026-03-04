@@ -91,9 +91,16 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
     console.log('[CSV Debug] Lowercase Headers:', headers);
     console.log('[CSV Debug] Delimiter used:', delimiter);
 
+    // Helper to check if a header matches our aliases safely
+    const matchHeader = (h: string, id: string) => {
+        if (h === id) return true;
+        if (id.length <= 2) return new RegExp(`(^|[\\s_\\-])${id}([\\s_\\-]|$)`).test(h);
+        return h.includes(id);
+    };
+
     // Basic validation: need at least one identifier column (Hostname or IP)
-    const hasHostname = UNIVERSAL_HOSTNAME.some(id => headers.some(header => header.includes(id)));
-    const hasIP = UNIVERSAL_IP.some(id => headers.some(header => header.includes(id)));
+    const hasHostname = UNIVERSAL_HOSTNAME.some(id => headers.some(h => matchHeader(h, id)));
+    const hasIP = UNIVERSAL_IP.some(id => headers.some(h => matchHeader(h, id)));
 
     if (!hasHostname && !hasIP) {
         console.warn('[CSV Debug] No hostname or IP found in headers:', headers);
@@ -246,7 +253,18 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 }
 
 function getValue(row: string[], headers: string[], colName: string): string {
-    const idx = headers.indexOf(colName.toLowerCase());
+    const search = colName.toLowerCase();
+
+    // 1. Exact match
+    let idx = headers.indexOf(search);
+    if (idx !== -1 && row[idx]) return row[idx].trim();
+
+    // 2. Loose match
+    idx = headers.findIndex(h => {
+        if (search.length <= 2) return new RegExp(`(^|[\\s_\\-])${search}([\\s_\\-]|$)`).test(h);
+        return h.includes(search);
+    });
+
     if (idx !== -1 && row[idx]) return row[idx].trim();
     return '';
 }
