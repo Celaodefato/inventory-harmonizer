@@ -9,22 +9,23 @@ describe('CSV Parser', () => {
         expect(result.data).toHaveLength(0);
     });
 
-    it('should return error for missing header', () => {
-        const result = parseCsv('hostname,another\nval1,val2', 'vicarius');
-        expect(result.error).toContain('Formato inválido');
+    it('should validate required headers (hostname or ip)', () => {
+        // Valid with hostname
+        const valid1 = parseCsv('hostname,another\nhost1,val2', 'vicarius');
+        expect(valid1.error).toBeUndefined();
+        expect(valid1.data[0].hostname).toBe('host1');
+
+        // Valid with ip (generates hostname)
+        const valid2 = parseCsv('ip,another\n1.1.1.1,val2', 'vicarius');
+        expect(valid2.error).toBeUndefined();
+        expect(valid2.data[0].hostname).toBe('device-1-1-1-1');
+
+        // Invalid (no hostname or ip)
+        const invalid = parseCsv('random,column\nval1,val2', 'vicarius');
+        expect(invalid.error).toContain('Nenhuma coluna de Hostname ou IP');
     });
 
-    it('should validate required headers (hostname, ip, uuid)', () => {
-        // Valid
-        const valid = parseCsv('hostname,ip,uuid\nhost1,1.1.1.1,id1', 'vicarius');
-        expect(valid.error).toBeUndefined();
-
-        // Invalid
-        const invalid = parseCsv('hostname,ip\nval1,val2', 'vicarius');
-        expect(invalid.error).toContain('uuid');
-    });
-
-    it('should accept alternative uuid headers (id, device_id)', () => {
+    it('should accept and use uuid headers (uuid, id, device_id) if present', () => {
         const result1 = parseCsv('hostname,ip,id\nhost1,1.1.1.1,id1', 'vicarius');
         expect(result1.error).toBeUndefined();
         expect(result1.data[0].uuid).toBe('id1');

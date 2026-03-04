@@ -8,10 +8,13 @@ export interface ParsedCsvResult {
 }
 
 // Configuration: Defines how to map CSV columns to our data model for each tool
+const UNIVERSAL_HOSTNAME = ['hostname', 'name', 'asset name', 'endpoint name', 'displayname', 'host', 'servidor', 'device', 'system name', 'login'];
+const UNIVERSAL_IP = ['ip address', 'ip', 'remoteip', 'internal ip address', 'external ip address', 'endereço ip', 'ip_address'];
+
 const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[]; lastSeen: string[]; other?: Record<string, string[]> }> = {
     cortex: {
-        hostname: ['endpoint name', 'name'],
-        ip: ['ip address', 'ip'],
+        hostname: UNIVERSAL_HOSTNAME,
+        ip: UNIVERSAL_IP,
         os: ['operating system', 'os', 'platform'],
         lastSeen: ['last seen'],
         other: {
@@ -20,27 +23,27 @@ const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[
         }
     },
     vicarius: {
-        hostname: ['name', 'asset name'],
-        ip: ['internal ip address', 'external ip address', 'ip'],
+        hostname: UNIVERSAL_HOSTNAME,
+        ip: UNIVERSAL_IP,
         os: ['operating system', 'os'],
         lastSeen: ['last contacted', 'last reported']
     },
     warp: {
-        hostname: ['hostname', 'device name'],
-        ip: [],
+        hostname: UNIVERSAL_HOSTNAME,
+        ip: UNIVERSAL_IP,
         os: [],
         lastSeen: [],
         other: { email: ['email', 'user'] }
     },
     jumpcloud: {
-        hostname: ['hostname', 'displayname', 'system name'],
-        ip: ['remoteip', 'ip_address'],
+        hostname: UNIVERSAL_HOSTNAME,
+        ip: UNIVERSAL_IP,
         os: ['os', 'osfamily'],
         lastSeen: ['lastcontact', 'last_seen']
     },
     jumpcloud_users: {
-        hostname: ['email', 'username'],
-        ip: [],
+        hostname: ['email', 'username', ...UNIVERSAL_HOSTNAME],
+        ip: UNIVERSAL_IP,
         os: [],
         lastSeen: [],
         other: {
@@ -51,14 +54,14 @@ const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[
         }
     },
     pam: {
-        hostname: ['hostname', 'asset name', 'name', 'host', 'servidor', 'device'],
-        ip: ['ip address', 'ip', 'endereço ip'],
+        hostname: UNIVERSAL_HOSTNAME,
+        ip: UNIVERSAL_IP,
         os: ['operating system', 'os', 'sistema operacional'],
         lastSeen: ['last access', 'último acesso']
     },
     generic: {
-        hostname: ['hostname', 'name'],
-        ip: ['ip', 'ip address'],
+        hostname: UNIVERSAL_HOSTNAME,
+        ip: UNIVERSAL_IP,
         os: ['os', 'operating system'],
         lastSeen: ['last seen']
     }
@@ -88,22 +91,17 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
     console.log('[CSV Debug] Lowercase Headers:', headers);
     console.log('[CSV Debug] Delimiter used:', delimiter);
 
-    // Basic validation: need at least one identifier column
-    const validIdentifiers = ['hostname', 'displayname', 'asset name', 'endpoint name', 'email', 'username', 'name', 'host', 'servidor', 'device'];
-    const hasIdentifier = validIdentifiers.some(id => headers.some(header => header.includes(id)));
+    // Basic validation: need at least one identifier column (Hostname or IP)
+    const hasHostname = UNIVERSAL_HOSTNAME.some(id => headers.some(header => header.includes(id)));
+    const hasIP = UNIVERSAL_IP.some(id => headers.some(header => header.includes(id)));
 
-    if (!hasIdentifier) {
-        console.warn('[CSV Debug] No standard identifier found in headers:', headers);
-        // If it's a known tool or we have at least one column, let's try to be even more relaxed
-        if (requestedTool && requestedTool !== 'generic' && headers.length > 0) {
-            console.log(`[CSV Debug] ${requestedTool} requested, allowing fallback identifier check`);
-        } else {
-            return {
-                data: [],
-                count: 0,
-                error: `Erro de Formato: Nenhuma coluna de identificação reconhecida (ex: hostname, name, host). Colunas detectadas: ${headers.join(', ')}`
-            };
-        }
+    if (!hasHostname && !hasIP) {
+        console.warn('[CSV Debug] No hostname or IP found in headers:', headers);
+        return {
+            data: [],
+            count: 0,
+            error: `Erro de Formato: Nenhuma coluna de Hostname ou IP encontrada. Colunas detectadas: ${headers.join(', ')}`
+        };
     }
 
     // 2. Identify Tool (Auto-Detect or Use Requested)
@@ -111,17 +109,26 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 
     // Auto-detection using unique columns
     if (headers.includes('endpoint name') && headers.includes('endpoint type')) detectedType = 'cortex';
-    else if (headers.includes('asset groups') || headers.includes('name') || headers.includes('attributes')) detectedType = 'vicarius';
+    else if (headers.includes('asset groups') || headers.includes('attributes')) detectedType = 'vicarius'; // 'name' removed from here because it's too common
     else if (headers.includes('displayname') && headers.includes('_id')) detectedType = 'jumpcloud';
     else if (headers.includes('hostname') && headers.includes('email') && headers.includes('grupo')) detectedType = 'warp';
-    else if (headers.includes('hostname') && (headers.includes('ip address') || headers.includes('last access') || headers.length < 8)) detectedType = 'pam'; // SenhaSegura fallback
     else if (headers.includes('active device count') && headers.includes('email')) detectedType = 'warp';
     else if (headers.includes('displayname') && headers.includes('osfamily')) detectedType = 'jumpcloud';
     else if (headers.includes('state') && headers.includes('email')) detectedType = 'jumpcloud_users';
 
-    // Fallback to requested tool if detection failed
+    // Fallback to requested tool if detection didn't find something specific
+    // EXCEPT if requestedTool is 'generic' or Empty, then we try some loose detection
     if (!detectedType) {
-        detectedType = requestedTool ? requestedTool.toLowerCase() : 'generic';
+        if (requestedTool && requestedTool !== 'generic') {
+            detectedType = requestedTool.toLowerCase();
+        } else {
+            // Loose detection for generic/auto-only mode
+            if (headers.includes('hostname') && (headers.includes('ip address') || headers.includes('last access') || headers.length < 8)) {
+                detectedType = 'pam';
+            } else {
+                detectedType = 'generic';
+            }
+        }
     }
 
     const data: any[] = [];
@@ -149,24 +156,26 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
         // 3. Extract Data
 
         // A. Hostname (Universal Priority)
-        let hostname = getValue(row, headers, 'hostname');
-
-        if (!hostname && config) {
-            for (const col of config.hostname) {
-                const val = getValue(row, headers, col);
-                if (val) { hostname = val; break; }
-            }
+        let hostname = '';
+        for (const col of UNIVERSAL_HOSTNAME) {
+            const val = getValue(row, headers, col);
+            if (val) { hostname = val; break; }
         }
 
-        if (!hostname && (detectedType === 'warp' || detectedType === 'jumpcloud_users')) {
-            hostname = getValue(row, headers, 'email');
+        // B. IP (Universal Priority)
+        let ip = '';
+        for (const col of UNIVERSAL_IP) {
+            const val = getValue(row, headers, col);
+            if (val) { ip = val; break; }
         }
 
-        if (!hostname) hostname = getValue(row, headers, 'name');
-
-        if (!hostname) continue;
+        if (!hostname) {
+            if (ip) hostname = `device-${ip.replace(/\./g, '-')}`; // Fallback if only IP exists
+            else continue;
+        }
 
         item.hostname = hostname;
+        item.ip = ip;
 
         // UUID
         if (uuidCol) {
