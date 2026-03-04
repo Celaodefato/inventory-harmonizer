@@ -104,24 +104,23 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
         };
     }
 
-    // 2. Identify Tool (Auto-Detect or Use Requested)
+    // 2. Identify Tool (Explicit or Auto-Detect)
     let detectedType = '';
 
-    // Auto-detection using unique columns
-    if (headers.includes('endpoint name') && headers.includes('endpoint type')) detectedType = 'cortex';
-    else if (headers.includes('asset groups') || headers.includes('attributes')) detectedType = 'vicarius'; // 'name' removed from here because it's too common
-    else if (headers.includes('displayname') && headers.includes('_id')) detectedType = 'jumpcloud';
-    else if (headers.includes('hostname') && headers.includes('email') && headers.includes('grupo')) detectedType = 'warp';
-    else if (headers.includes('active device count') && headers.includes('email')) detectedType = 'warp';
-    else if (headers.includes('displayname') && headers.includes('osfamily')) detectedType = 'jumpcloud';
-    else if (headers.includes('state') && headers.includes('email')) detectedType = 'jumpcloud_users';
+    if (requestedTool && requestedTool !== 'generic') {
+        // Always trust the UI button the user clicked
+        detectedType = requestedTool.toLowerCase();
+    } else {
+        // Auto-detection using unique columns (only used if uploaded via a generic area)
+        if (headers.includes('endpoint name') && headers.includes('endpoint type')) detectedType = 'cortex';
+        else if (headers.includes('asset groups') || headers.includes('attributes')) detectedType = 'vicarius';
+        else if (headers.includes('displayname') && headers.includes('_id')) detectedType = 'jumpcloud';
+        else if (headers.includes('hostname') && headers.includes('email') && headers.includes('grupo')) detectedType = 'warp';
+        else if (headers.includes('active device count') && headers.includes('email')) detectedType = 'warp';
+        else if (headers.includes('displayname') && headers.includes('osfamily')) detectedType = 'jumpcloud';
+        else if (headers.includes('state') && headers.includes('email')) detectedType = 'jumpcloud_users';
 
-    // Fallback to requested tool if detection didn't find something specific
-    // EXCEPT if requestedTool is 'generic' or Empty, then we try some loose detection
-    if (!detectedType) {
-        if (requestedTool && requestedTool !== 'generic') {
-            detectedType = requestedTool.toLowerCase();
-        } else {
+        if (!detectedType) {
             // Loose detection for generic/auto-only mode
             if (headers.includes('hostname') && (headers.includes('ip address') || headers.includes('last access') || headers.length < 8)) {
                 detectedType = 'pam';
