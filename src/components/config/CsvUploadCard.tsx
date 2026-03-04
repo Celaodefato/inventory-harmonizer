@@ -148,7 +148,7 @@ export function CsvUploadCard({
                                             ? <>Colunas: <b>Email</b>, Firstname, Lastname, State</>
                                             : tool === 'warp'
                                                 ? <>Colunas: <b>Email</b>, Active Device Count</>
-                                                : <>Vínculo obrigatório: <b>hostname</b></>
+                                                : <>Obrigatório: <b>hostname</b>, <b>name</b> ou <b>email</b></>
                                         }
                                     </p>
                                 </div>

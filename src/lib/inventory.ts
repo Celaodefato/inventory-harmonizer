@@ -17,7 +17,8 @@ function isApiConfigured(config: ApiConfig, tool: keyof ApiConfig): boolean {
 
 function normalizeHostname(hostname: string | null | undefined): string {
   if (!hostname) return 'unknown-device';
-  return hostname.toLowerCase().trim();
+  // Rule: Lowercase and remove domain suffix
+  return hostname.toLowerCase().split('.')[0].trim();
 }
 
 export function normalizeEndpoint(endpoint: Endpoint): NormalizedEndpoint {
@@ -31,11 +32,16 @@ export function normalizeEndpoint(endpoint: Endpoint): NormalizedEndpoint {
     sourceOrigins: { [endpoint.source]: endpoint.origin },
     userId: endpoint.userId,
     userEmail: endpoint.userEmail,
+    endpointStatus: endpoint.endpointStatus,
+    endpointType: endpoint.endpointType,
   };
 }
 
 
-export function isWorkstation(hostname: string): boolean {
+export function isWorkstation(hostname: string, endpointType?: string): boolean {
+  if (endpointType === 'Workstation') return true;
+  if (endpointType === 'Server') return false;
+
   const h = hostname.toUpperCase();
   return h.startsWith('EXA-ARKLX') ||
     h.startsWith('EXA-ARKNT') ||
@@ -57,8 +63,7 @@ export function getRequiredSources(hostname: string): string[] {
 }
 
 export function isEndpointCompliant(endpoint: NormalizedEndpoint): boolean {
-  const required = getRequiredSources(endpoint.hostname);
-  return required.every(s => endpoint.sources.includes(s as any));
+  return endpoint.complianceStatus === 'COMPLETO';
 }
 
 export function getEndpointRiskDetails(endpoint: NormalizedEndpoint): { level: NormalizedEndpoint['riskLevel']; reason: string | null } {
@@ -299,11 +304,13 @@ export function compareInventories(
           existing.sources.push(source);
           existing.sourceOrigins[source] = ep.origin;
         }
-        // Enrich data
-        if (!existing.ip && ep.ip) existing.ip = ep.ip;
-        if (!existing.os && ep.os) existing.os = ep.os;
-        if (!existing.lastSeen && ep.lastSeen) existing.lastSeen = ep.lastSeen;
-        if (!existing.userEmail && ep.userEmail) existing.userEmail = ep.userEmail;
+        // Enrich data - Priority for Cortex/Vicarius for some fields
+        if (ep.ip && (!existing.ip || source === 'cortex')) existing.ip = ep.ip;
+        if (ep.os && (!existing.os || source === 'vicarius')) existing.os = ep.os;
+        if (ep.lastSeen && (!existing.lastSeen || source === 'vicarius')) existing.lastSeen = ep.lastSeen;
+        if (ep.userEmail && (!existing.userEmail || source === 'warp')) existing.userEmail = ep.userEmail;
+        if (ep.endpointStatus) existing.endpointStatus = ep.endpointStatus;
+        if (ep.endpointType) existing.endpointType = ep.endpointType;
       }
     });
   };
@@ -343,47 +350,41 @@ export function compareInventories(
   };
 
   allEndpoints.forEach(ep => {
-    // Categorize
-    if (isServer(ep.hostname)) {
+    // 1. Classification
+    // Rule: SERVIDORES if in SenhaSegura (pam) OR Endpoint Type in Cortex is 'Server'
+    const inPam = ep.sources.includes('pam');
+    const isCortexServer = ep.endpointType === 'Server';
+
+    if (inPam || isCortexServer) {
+      ep.classification = 'SERVIDORES';
       servers.push(ep);
-
-      // Server Compliance Rule
-      const hasCortex = ep.sources.includes('cortex');
-      const hasVicarius = ep.sources.includes('vicarius');
-
-      if (!hasCortex || !hasVicarius) {
-        ep.riskLevel = 'high';
-        ep.riskReason = 'Servidor Fora de Compliance: Requer Cortex e Vicarius.';
-        if (!hasCortex) ep.riskReason += ' [Faltando Cortex]';
-        if (!hasVicarius) ep.riskReason += ' [Faltando Vicarius]';
-        nonCompliant.push(ep);
-      }
     } else {
-      // It's a Workstation (or intended to be)
+      ep.classification = 'WORKSTATIONS';
       workstations.push(ep);
+    }
 
-      // 1. Naming Convention Check
-      if (!isValidWorkstationName(ep.hostname)) {
-        // It failed strict workstation check, but wasn't classified as Server
-        // This means it starts with EXA-ARK... but maybe not the right suffix?
-        // Or it matched the loose "Not Server" logic but failed strict check.
+    // 2. Compliance Status
+    const hasVicarius = ep.sources.includes('vicarius');
+    const hasCortex = ep.sources.includes('cortex');
+    const hasWarp = ep.sources.includes('warp');
+
+    if (!hasVicarius || !hasCortex) {
+      ep.complianceStatus = 'CRÍTICO';
+      ep.riskLevel = 'high';
+      ep.riskReason = !hasVicarius ? 'Ausente no Vicarius' : 'Ausente no Cortex XDR';
+      nonCompliant.push(ep);
+    } else {
+      // Vicarius and Cortex present, check tool specific
+      const toolOk = ep.classification === 'WORKSTATIONS' ? hasWarp : inPam;
+
+      if (toolOk) {
+        ep.complianceStatus = 'COMPLETO';
+        ep.riskLevel = 'none';
+      } else {
+        ep.complianceStatus = 'PARCIAL';
         ep.riskLevel = 'medium';
-        ep.riskReason = (ep.riskReason || '') + 'Violação de Nomenclatura (Padrão: EXA-ARKLX/NT/MAC)';
-        namingViolations.push(ep);
-      }
-
-      // 2. Tool Compliance Rule
-      const hasWarp = ep.sources.includes('warp');
-      if (!hasWarp) {
-        ep.riskLevel = 'medium';
-        ep.riskReason = (ep.riskReason ? ep.riskReason + '; ' : '') + 'Ausente no Warp';
-        if (!nonCompliant.includes(ep)) nonCompliant.push(ep);
-
-        userViolations.push({
-          userEmail: ep.userEmail || ep.hostname,
-          riskReason: 'Workstation Ativa sem Warp',
-          sources: ep.sources
-        });
+        ep.riskReason = ep.classification === 'WORKSTATIONS' ? 'Faltando Warp' : 'Faltando SenhaSegura (PAM)';
+        nonCompliant.push(ep);
       }
     }
   });

@@ -270,7 +270,7 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
                 onClick={() => handleSort('risk')}
               >
                 <div className="flex items-center">
-                  COMPLIANCE
+                  STATUS
                   <SortIcon field="risk" />
                 </div>
               </th>
@@ -316,7 +316,12 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
                     )}
                   >
                     <td className="px-6 py-4 text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                      {endpoint.hostname}
+                      <div className="flex flex-col">
+                        <span>{endpoint.hostname}</span>
+                        <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold">
+                          {endpoint.classification || '-'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-[11px] text-muted-foreground font-mono font-bold">
                       {endpoint.ip}
@@ -347,14 +352,14 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div>
-                            {endpoint.riskLevel === 'high' ? (
+                            {endpoint.complianceStatus === 'CRÍTICO' ? (
                               <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold bg-destructive/10 text-destructive border border-destructive/20 cursor-help">
                                 <AlertTriangle className="h-3 w-3" />
                                 CRÍTICO
                               </div>
-                            ) : isEndpointCompliant(endpoint) ? (
+                            ) : endpoint.complianceStatus === 'COMPLETO' ? (
                               <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold bg-success/10 text-success border border-success/20">
-                                CONFORME
+                                COMPLETO
                               </div>
                             ) : (
                               <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 cursor-help">

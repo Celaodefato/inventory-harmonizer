@@ -9,6 +9,8 @@ export interface Endpoint {
   origin: 'api' | 'csv' | 'mock';
   userId?: string;
   userEmail?: string;
+  endpointStatus?: string;
+  endpointType?: 'Server' | 'Workstation';
 }
 
 export interface NormalizedEndpoint {
@@ -23,6 +25,10 @@ export interface NormalizedEndpoint {
   userEmail?: string;
   riskLevel?: 'none' | 'low' | 'medium' | 'high';
   riskReason?: string;
+  endpointStatus?: string;
+  endpointType?: 'Server' | 'Workstation';
+  classification?: 'SERVIDORES' | 'WORKSTATIONS';
+  complianceStatus?: 'COMPLETO' | 'PARCIAL' | 'CRÍTICO';
 }
 
 export interface ComparisonResult {

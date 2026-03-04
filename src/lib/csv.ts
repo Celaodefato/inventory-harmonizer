@@ -10,29 +10,33 @@ export interface ParsedCsvResult {
 // Configuration: Defines how to map CSV columns to our data model for each tool
 const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[]; lastSeen: string[]; other?: Record<string, string[]> }> = {
     cortex: {
-        hostname: ['endpoint name', 'agent id'],
+        hostname: ['endpoint name', 'name'],
         ip: ['ip address', 'ip'],
-        os: ['operating system', 'os'],
-        lastSeen: ['last seen']
+        os: ['operating system', 'os', 'platform'],
+        lastSeen: ['last seen'],
+        other: {
+            endpointStatus: ['endpoint status', 'status'],
+            endpointType: ['endpoint type', 'type']
+        }
     },
     vicarius: {
         hostname: ['name', 'asset name'],
-        ip: ['internal ip address', 'external ip address'],
-        os: ['operating system'],
-        lastSeen: []
+        ip: ['internal ip address', 'external ip address', 'ip'],
+        os: ['operating system', 'os'],
+        lastSeen: ['last contacted', 'last reported']
     },
     warp: {
-        hostname: ['email', 'device name'], // Warp fallback priority
+        hostname: ['hostname', 'device name'],
         ip: [],
         os: [],
         lastSeen: [],
-        other: { activeDeviceCount: ['active device count'], email: ['email'] }
+        other: { email: ['email', 'user'] }
     },
     jumpcloud: {
-        hostname: ['displayname', 'system name'],
-        ip: [],
-        os: ['osfamily', 'os'],
-        lastSeen: ['lastcontact']
+        hostname: ['hostname', 'displayname', 'system name'],
+        ip: ['remoteip', 'ip_address'],
+        os: ['os', 'osfamily'],
+        lastSeen: ['lastcontact', 'last_seen']
     },
     jumpcloud_users: {
         hostname: ['email', 'username'],
@@ -47,7 +51,7 @@ const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[
         }
     },
     pam: {
-        hostname: ['asset name', 'name', 'hostname'],
+        hostname: ['hostname', 'asset name', 'name'],
         ip: ['ip address', 'ip'],
         os: ['operating system', 'os'],
         lastSeen: ['last access']
@@ -80,12 +84,13 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 
     const rawHeaders = firstLine.split(delimiter).map(clean);
     const headers = rawHeaders.map(h => h.toLowerCase());
+    console.log('CSV Headers detected:', headers);
 
     // Basic validation: need at least one identifier column
-    const validIdentifiers = ['hostname', 'displayname', 'asset name', 'endpoint name', 'email', 'username'];
-    const hasIdentifier = validIdentifiers.some(id => headers.includes(id));
+    const validIdentifiers = ['hostname', 'displayname', 'asset name', 'endpoint name', 'email', 'username', 'name'];
+    const hasIdentifier = validIdentifiers.some(id => headers.some(header => header.includes(id)));
     if (!hasIdentifier) {
-        return { data: [], count: 0, error: 'Formato inválido: Coluna de identificação não encontrada (hostname, email ou username).' };
+        return { data: [], count: 0, error: 'Erro de Formato: Coluna de identificação não encontrada (hostname, name ou email).' };
     }
 
     // 2. Identify Tool (Auto-Detect or Use Requested)
@@ -94,6 +99,9 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
     // Auto-detection using unique columns
     if (headers.includes('endpoint name') && headers.includes('endpoint type')) detectedType = 'cortex';
     else if (headers.includes('asset groups') || (headers.includes('name') && headers.includes('attributes'))) detectedType = 'vicarius';
+    else if (headers.includes('displayname') && headers.includes('_id')) detectedType = 'jumpcloud';
+    else if (headers.includes('hostname') && headers.includes('email') && headers.includes('grupo')) detectedType = 'warp';
+    else if (headers.includes('hostname') && headers.length < 5) detectedType = 'pam'; // SenhaSegura usually simple
     else if (headers.includes('active device count') && headers.includes('email')) detectedType = 'warp';
     else if (headers.includes('displayname') && headers.includes('osfamily')) detectedType = 'jumpcloud';
     else if (headers.includes('state') && headers.includes('email')) detectedType = 'jumpcloud_users';
@@ -175,7 +183,14 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
                 Object.entries(config.other).forEach(([key, cols]) => {
                     for (const col of cols) {
                         const val = getValue(row, headers, col);
-                        if (val) { item[key] = val; break; }
+                        if (val) {
+                            if (key === 'email') {
+                                item.userEmail = val;
+                            } else {
+                                item[key] = val;
+                            }
+                            break;
+                        }
                     }
                 });
             }

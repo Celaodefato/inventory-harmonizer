@@ -260,12 +260,13 @@ export default function Dashboard() {
     }
   };
 
-  const divergencesCount =
-    (comparison?.missingFromVicarius.length || 0) +
-    (comparison?.missingFromCortex.length || 0) +
-    (comparison?.missingFromWarp.length || 0) +
-    (comparison?.missingFromPam.length || 0) +
-    (comparison?.missingFromJumpcloud.length || 0);
+  const complianceStats = comparison ? {
+    completo: comparison.allEndpoints.filter(e => e.complianceStatus === 'COMPLETO').length,
+    parcial: comparison.allEndpoints.filter(e => e.complianceStatus === 'PARCIAL').length,
+    critico: comparison.allEndpoints.filter(e => e.complianceStatus === 'CRÍTICO').length,
+  } : { completo: 0, parcial: 0, critico: 0 };
+
+  const divergencesCount = complianceStats.parcial + complianceStats.critico;
 
   const terminatedRiskCount = comparison?.terminatedWithActiveEndpoints.length || 0;
   const terminatedInSystemsCount =
@@ -365,23 +366,23 @@ export default function Dashboard() {
                 icon={<Server className="h-4 w-4" />}
               />
               <StatCard
-                title="Sincronização Total"
-                value={comparison?.inAllSources.length || 0}
-                subtitle="Presentes em todas as bases"
+                title="Compliance Total"
+                value={complianceStats.completo}
+                subtitle="Status 'COMPLETO'"
                 icon={<CheckCircle2 className="h-4 w-4" />}
-                variant={comparison?.inAllSources.length && comparison.inAllSources.length > 0 ? 'success' : 'default'}
+                variant={complianceStats.completo > 0 ? 'success' : 'default'}
               />
               <StatCard
-                title="Gaps de Inventário"
+                title="Gaps de Segurança"
                 value={divergencesCount}
-                subtitle="Divergências entre ferramentas"
+                subtitle={`${complianceStats.critico} Críticos | ${complianceStats.parcial} Parciais`}
                 icon={<AlertTriangle className="h-4 w-4" />}
-                variant={divergencesCount > 0 ? 'warning' : 'default'}
+                variant={complianceStats.critico > 0 ? 'error' : (complianceStats.parcial > 0 ? 'warning' : 'default')}
               />
               <StatCard
-                title="Saúde do Sistema"
-                value={syncStatus.status === 'syncing' ? 'Sincronizando' : 'Pronto'}
-                subtitle="Conexões com 5 APIs ativas"
+                title="Inventário"
+                value={`${comparison?.workstations.length || 0} WKS`}
+                subtitle={`${comparison?.servers.length || 0} Servidores`}
                 icon={<Shield className="h-4 w-4" />}
               />
             </div>
