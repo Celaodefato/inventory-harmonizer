@@ -94,9 +94,9 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 
     if (!hasIdentifier) {
         console.warn('[CSV Debug] No standard identifier found in headers:', headers);
-        // If it's PAM and we have at least one column, let's try to be even more relaxed
-        if (requestedTool === 'pam' && headers.length > 0) {
-            console.log('[CSV Debug] PAM requested, allowing fallback identifier check');
+        // If it's a known tool or we have at least one column, let's try to be even more relaxed
+        if (requestedTool && requestedTool !== 'generic' && headers.length > 0) {
+            console.log(`[CSV Debug] ${requestedTool} requested, allowing fallback identifier check`);
         } else {
             return {
                 data: [],
@@ -111,7 +111,7 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 
     // Auto-detection using unique columns
     if (headers.includes('endpoint name') && headers.includes('endpoint type')) detectedType = 'cortex';
-    else if (headers.includes('asset groups') || (headers.includes('name') && headers.includes('attributes'))) detectedType = 'vicarius';
+    else if (headers.includes('asset groups') || headers.includes('name') || headers.includes('attributes')) detectedType = 'vicarius';
     else if (headers.includes('displayname') && headers.includes('_id')) detectedType = 'jumpcloud';
     else if (headers.includes('hostname') && headers.includes('email') && headers.includes('grupo')) detectedType = 'warp';
     else if (headers.includes('hostname') && (headers.includes('ip address') || headers.includes('last access') || headers.length < 8)) detectedType = 'pam'; // SenhaSegura fallback
