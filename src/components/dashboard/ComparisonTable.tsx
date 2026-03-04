@@ -28,7 +28,7 @@ interface ComparisonTableProps {
 
 type SortField = 'hostname' | 'ip' | 'os' | 'sources' | 'risk';
 type SortDirection = 'asc' | 'desc';
-type SourceFilter = 'all' | 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud' | 'missing-any' | 'risk';
+type SourceFilter = 'all' | 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud' | 'missing-any' | 'missing-vicarius' | 'missing-cortex' | 'missing-warp' | 'missing-pam' | 'missing-jumpcloud' | 'risk';
 
 export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
   const [search, setSearch] = useState('');
@@ -55,6 +55,9 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
         result = result.filter((e) => !isEndpointCompliant(e));
       } else if (sourceFilter === 'risk') {
         result = result.filter((e) => (e.riskLevel && e.riskLevel !== 'none') || !isEndpointCompliant(e));
+      } else if (sourceFilter.startsWith('missing-')) {
+        const tool = sourceFilter.replace('missing-', '');
+        result = result.filter((e) => !e.sources.includes(tool as any));
       } else {
         result = result.filter((e) => e.sources.includes(sourceFilter as any));
       }
@@ -165,11 +168,21 @@ export function ComparisonTable({ endpoints, title }: ComparisonTableProps) {
               </SelectTrigger>
               <SelectContent className="bg-popover border-border">
                 <SelectItem value="all" className="text-[10px] uppercase font-bold tracking-widest">Todas as Fontes</SelectItem>
+                <div className="px-2 py-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/30 mb-1">Presente em:</div>
                 <SelectItem value="vicarius" className="text-[10px] uppercase font-bold tracking-widest">Vicarius</SelectItem>
                 <SelectItem value="cortex" className="text-[10px] uppercase font-bold tracking-widest">Cortex</SelectItem>
                 <SelectItem value="warp" className="text-[10px] uppercase font-bold tracking-widest">Warp</SelectItem>
                 <SelectItem value="pam" className="text-[10px] uppercase font-bold tracking-widest">PAM</SelectItem>
                 <SelectItem value="jumpcloud" className="text-[10px] uppercase font-bold tracking-widest">JumpCloud</SelectItem>
+
+                <div className="h-px bg-border my-1" />
+                <div className="px-2 py-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest bg-muted/30 mb-1">Faltando:</div>
+                <SelectItem value="missing-vicarius" className="text-[10px] uppercase font-bold tracking-widest text-warning">Faltando Vicarius</SelectItem>
+                <SelectItem value="missing-cortex" className="text-[10px] uppercase font-bold tracking-widest text-warning">Faltando Cortex</SelectItem>
+                <SelectItem value="missing-warp" className="text-[10px] uppercase font-bold tracking-widest text-warning">Faltando Warp</SelectItem>
+                <SelectItem value="missing-pam" className="text-[10px] uppercase font-bold tracking-widest text-warning">Faltando PAM</SelectItem>
+                <SelectItem value="missing-jumpcloud" className="text-[10px] uppercase font-bold tracking-widest text-warning">Faltando JumpCloud</SelectItem>
+
                 <div className="h-px bg-border my-1" />
                 <SelectItem value="missing-any" className="text-[10px] uppercase font-bold tracking-widest text-orange-500">Fora de Conformidade</SelectItem>
                 <SelectItem value="risk" className="text-[10px] uppercase font-bold tracking-widest text-destructive">Riscos de Segurança</SelectItem>
