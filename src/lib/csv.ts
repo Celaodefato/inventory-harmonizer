@@ -84,13 +84,26 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
 
     const rawHeaders = firstLine.split(delimiter).map(clean);
     const headers = rawHeaders.map(h => h.toLowerCase());
-    console.log('CSV Headers detected:', headers);
+    console.log('[CSV Debug] Raw Headers:', rawHeaders);
+    console.log('[CSV Debug] Lowercase Headers:', headers);
+    console.log('[CSV Debug] Delimiter used:', delimiter);
 
     // Basic validation: need at least one identifier column
-    const validIdentifiers = ['hostname', 'displayname', 'asset name', 'endpoint name', 'email', 'username', 'name'];
+    const validIdentifiers = ['hostname', 'displayname', 'asset name', 'endpoint name', 'email', 'username', 'name', 'host', 'servidor', 'device'];
     const hasIdentifier = validIdentifiers.some(id => headers.some(header => header.includes(id)));
+
     if (!hasIdentifier) {
-        return { data: [], count: 0, error: 'Erro de Formato: Coluna de identificação não encontrada (hostname, name ou email).' };
+        console.warn('[CSV Debug] No standard identifier found in headers:', headers);
+        // If it's PAM and we have at least one column, let's try to be even more relaxed
+        if (requestedTool === 'pam' && headers.length > 0) {
+            console.log('[CSV Debug] PAM requested, allowing fallback identifier check');
+        } else {
+            return {
+                data: [],
+                count: 0,
+                error: `Erro de Formato: Nenhuma coluna de identificação reconhecida (ex: hostname, name, host). Colunas detectadas: ${headers.join(', ')}`
+            };
+        }
     }
 
     // 2. Identify Tool (Auto-Detect or Use Requested)
@@ -121,7 +134,9 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
     for (let i = 1; i < lines.length; i++) {
         // Parse row with custom delimiter logic
         const row = parseRow(lines[i], delimiter);
-        if (row.length < headers.length * 0.5) continue; // Skip malformed
+        if (i === 1) console.log('[CSV Debug] First data row sample:', row);
+
+        if (row.length < headers.length * 0.3) continue; // Skip malformed (relaxed from 0.5)
 
         const item: any = {
             source: detectedType,
