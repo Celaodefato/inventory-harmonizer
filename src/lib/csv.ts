@@ -51,10 +51,10 @@ const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[
         }
     },
     pam: {
-        hostname: ['hostname', 'asset name', 'name'],
-        ip: ['ip address', 'ip'],
-        os: ['operating system', 'os'],
-        lastSeen: ['last access']
+        hostname: ['hostname', 'asset name', 'name', 'host', 'servidor', 'device'],
+        ip: ['ip address', 'ip', 'endereço ip'],
+        os: ['operating system', 'os', 'sistema operacional'],
+        lastSeen: ['last access', 'último acesso']
     },
     generic: {
         hostname: ['hostname', 'name'],
@@ -101,7 +101,7 @@ export function parseCsv(content: string, requestedTool: string): ParsedCsvResul
     else if (headers.includes('asset groups') || (headers.includes('name') && headers.includes('attributes'))) detectedType = 'vicarius';
     else if (headers.includes('displayname') && headers.includes('_id')) detectedType = 'jumpcloud';
     else if (headers.includes('hostname') && headers.includes('email') && headers.includes('grupo')) detectedType = 'warp';
-    else if (headers.includes('hostname') && headers.length < 5) detectedType = 'pam'; // SenhaSegura usually simple
+    else if (headers.includes('hostname') && (headers.includes('ip address') || headers.includes('last access') || headers.length < 8)) detectedType = 'pam'; // SenhaSegura fallback
     else if (headers.includes('active device count') && headers.includes('email')) detectedType = 'warp';
     else if (headers.includes('displayname') && headers.includes('osfamily')) detectedType = 'jumpcloud';
     else if (headers.includes('state') && headers.includes('email')) detectedType = 'jumpcloud_users';
