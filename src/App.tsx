@@ -11,6 +11,7 @@ import Users from "./pages/Users";
 import Logs from "./pages/Logs";
 import Alerts from "./pages/Alerts";
 import Profile from "./pages/Profile";
+import Licensing from "./pages/Licensing";
 import NotFound from "./pages/NotFound";
 import { AuthProvider, useAuth } from "@/components/auth/AuthProvider";
 import { Navigate } from "react-router-dom";
@@ -46,6 +47,7 @@ const AppRoutes = () => (
     <Route path="/logs" element={<ProtectedRoute><Logs /></ProtectedRoute>} />
     <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+    <Route path="/licensing" element={<ProtectedRoute><Licensing /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );

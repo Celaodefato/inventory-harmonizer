@@ -1,4 +1,4 @@
-import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX, LogOut, User, Users } from 'lucide-react';
+import { LayoutDashboard, Settings, FileText, AlertTriangle, Server, UserX, LogOut, User, Users, Key } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Configurar APIs', href: '/api-config', icon: Settings },
+  { name: 'Licenciamentos', href: '/licensing', icon: Key },
   { name: 'Desligados', href: '/terminated', icon: UserX },
   { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Logs / Erros', href: '/logs', icon: FileText },
