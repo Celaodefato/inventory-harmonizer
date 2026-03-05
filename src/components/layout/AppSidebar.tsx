@@ -12,7 +12,6 @@ const navigation = [
   { name: 'Desligados', href: '/terminated', icon: UserX },
   { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Logs / Erros', href: '/logs', icon: FileText },
-  { name: 'Alertas', href: '/alerts', icon: AlertTriangle },
 ];
 
 export function AppSidebar() {
