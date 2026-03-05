@@ -461,22 +461,23 @@ export function parseHackerRangersCsv(content: string): ParsedCsvResult {
     const { headers, rows } = parsed;
 
     const emailCol = headers.find(h => ['email', 'e-mail', 'e_mail', 'usuário', 'usuario'].includes(h));
-    if (!emailCol) {
-        return { data: [], count: 0, error: 'CSV do Hacker Rangers deve ter coluna "Email".' };
+    const nameCol = headers.find(h => ['nome', 'name', 'fullname', 'nome completo'].includes(h));
+
+    if (!nameCol) {
+        return { data: [], count: 0, error: 'CSV do Hacker Rangers deve ter a coluna "Nome".' };
     }
 
-    const nameCol = headers.find(h => ['nome', 'name', 'fullname', 'nome completo'].includes(h));
     const statusCol = headers.find(h => ['status', 'situação', 'situacao'].includes(h));
 
     const data = rows
         .map(row => ({
-            email: row[emailCol] || '',
-            name: nameCol ? row[nameCol] : '',
+            email: emailCol ? (row[emailCol] || '') : '',
+            name: row[nameCol] || '',
             status: statusCol ? row[statusCol] : 'Ativo',
             source: 'hacker_ranger',
             origin: 'csv',
         }))
-        .filter(u => u.email);
+        .filter(u => u.name); // Filter by name instead of email since email is optional
 
     return { data, count: data.length, detectedType: 'hacker_ranger' };
 }

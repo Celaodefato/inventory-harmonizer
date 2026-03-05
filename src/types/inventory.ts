@@ -176,7 +176,7 @@ export interface WarpUser {
 }
 
 export interface HackerRangerUser {
-  email: string;
+  email?: string;
   name: string;
   status: string;
 }

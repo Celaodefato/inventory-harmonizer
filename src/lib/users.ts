@@ -1,6 +1,19 @@
 import { JumpCloudUser, WarpUser, HackerRangerUser, BaseRhUser, UserComparison, TerminatedEmployee, UserComplianceStatus } from '@/types/inventory';
 
 /**
+ * Normalizes a name for comparison by removing accents, special characters,
+ * converting to lowercase, and trimming.
+ */
+function normalizeName(name: string): string {
+    return name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/[^a-z0-9\s]/g, '')     // Remove special characters
+        .trim();
+}
+
+/**
  * Compares users from multiple sources to identify compliance gaps.
  * Logic:
  * - BASE RH is the primary source of truth for active employees.
@@ -16,6 +29,7 @@ export function compareUsers(
     terminatedEmployees: TerminatedEmployee[]
 ): UserComparison[] {
     const userMap = new Map<string, UserComparison>();
+    const nameMap = new Map<string, UserComparison>(); // For matching by name
 
     const terminatedEmails = new Set(
         terminatedEmployees.map(emp => emp.email.toLowerCase())
@@ -25,8 +39,9 @@ export function compareUsers(
     baseRhUsers.forEach(rhUser => {
         const email = rhUser.email.toLowerCase();
         const isTerminated = terminatedEmails.has(email);
+        const normalizedName = normalizeName(rhUser.name);
 
-        userMap.set(email, {
+        const comparison: UserComparison = {
             email: rhUser.email,
             name: rhUser.name,
             inBaseRh: true,
@@ -35,11 +50,16 @@ export function compareUsers(
             inHackerRanger: false,
             baseRhStatus: rhUser.status,
             isTerminated,
-            complianceStatus: 'compliant' // Default, will be downgraded
-        });
+            complianceStatus: 'compliant'
+        };
+
+        userMap.set(email, comparison);
+        if (normalizedName) {
+            nameMap.set(normalizedName, comparison);
+        }
     });
 
-    // 2. Process JumpCloud
+    // 2. Process JumpCloud (Email-based)
     jumpCloudUsers.forEach(jcUser => {
         const email = jcUser.email.toLowerCase();
         const existing = userMap.get(email);
@@ -53,7 +73,7 @@ export function compareUsers(
             existing.inJumpCloud = true;
             existing.jumpCloudStatus = jumpCloudStatus;
         } else {
-            userMap.set(email, {
+            const comparison: UserComparison = {
                 email: jcUser.email,
                 name: `${jcUser.firstname} ${jcUser.lastname}`.trim() || jcUser.email.split('@')[0],
                 inBaseRh: false,
@@ -63,33 +83,50 @@ export function compareUsers(
                 jumpCloudStatus,
                 isTerminated,
                 complianceStatus: 'ghost_account'
-            });
+            };
+            userMap.set(email, comparison);
+            const normalizedName = normalizeName(comparison.name);
+            if (normalizedName && !nameMap.has(normalizedName)) {
+                nameMap.set(normalizedName, comparison);
+            }
         }
     });
 
-    // 3. Process Hacker Rangers
+    // 3. Process Hacker Rangers (Email-based AND Name-based fallback)
     hackerRangerUsers.forEach(hrUser => {
-        const email = hrUser.email.toLowerCase();
-        const existing = userMap.get(email);
+        const email = hrUser.email?.toLowerCase();
+        const normalizedName = normalizeName(hrUser.name);
+
+        // Try email first
+        let existing = email ? userMap.get(email) : null;
+
+        // Try name as fallback
+        if (!existing && normalizedName) {
+            existing = nameMap.get(normalizedName);
+        }
+
         if (existing) {
             existing.inHackerRanger = true;
             existing.hackerRangerStatus = hrUser.status;
+            // Update email if it was missing in existing but exists in HR
+            if (!existing.email && email) existing.email = email;
         } else {
-            userMap.set(email, {
-                email: hrUser.email,
-                name: hrUser.name || hrUser.email.split('@')[0],
+            const emailKey = email || `hr_no_email_${normalizedName}`;
+            userMap.set(emailKey, {
+                email: hrUser.email || '',
+                name: hrUser.name || hrUser.email?.split('@')[0] || 'Unknown',
                 inBaseRh: false,
                 inJumpCloud: false,
                 inWarp: false,
                 inHackerRanger: true,
                 hackerRangerStatus: hrUser.status,
-                isTerminated: terminatedEmails.has(email),
+                isTerminated: email ? terminatedEmails.has(email) : false,
                 complianceStatus: 'ghost_account'
             });
         }
     });
 
-    // 4. Process Warp
+    // 4. Process Warp (Email-based)
     warpUsers.forEach(warpUser => {
         const email = warpUser.email.toLowerCase();
         const existing = userMap.get(email);
@@ -129,7 +166,6 @@ export function compareUsers(
                 user.complianceStatus = 'compliant';
             }
         } else {
-            // Not in RH but in other systems
             user.complianceStatus = 'ghost_account';
         }
     });

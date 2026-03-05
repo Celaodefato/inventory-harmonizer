@@ -312,7 +312,7 @@ export default function UserCompliancePage() {
                                         <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum usuário encontrado.</td></tr>
                                     ) : (
                                         filteredUsers.map((user) => (
-                                            <tr key={user.email} className="hover:bg-muted/50 transition-colors">
+                                            <tr key={`${user.email}-${user.name}`} className="hover:bg-muted/50 transition-colors">
                                                 <td className="px-4 py-3 font-medium">{user.name}</td>
                                                 <td className="px-4 py-3 text-muted-foreground truncate max-w-[200px]">{user.email}</td>
                                                 {[user.inBaseRh, user.inJumpCloud, user.inHackerRanger, user.inWarp].map((present, i) => (
