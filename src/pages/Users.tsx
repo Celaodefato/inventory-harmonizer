@@ -246,13 +246,7 @@ export default function UsersPage() {
                         Desligado Ativo
                     </Badge>
                 );
-            case 'ghost_account':
-                return (
-                    <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20">
-                        <XCircle className="mr-1 h-3 w-3" />
-                        Conta Zumbi (Fora do RH)
-                    </Badge>
-                );
+            default: return null;
         }
     };
 

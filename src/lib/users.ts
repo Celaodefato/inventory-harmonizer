@@ -149,6 +149,8 @@ export function compareUsers(
     });
 
     // 5. Calculate Final Compliance Status
+    const rhProvided = baseRhUsers.length > 0;
+
     userMap.forEach((user) => {
         if (user.isTerminated && (user.inJumpCloud || user.inWarp || user.inHackerRanger)) {
             user.complianceStatus = 'terminated_active';
@@ -165,8 +167,18 @@ export function compareUsers(
             } else {
                 user.complianceStatus = 'compliant';
             }
-        } else {
+        } else if (rhProvided) {
+            // Only mark as ghost if RH was provided and user is not in it
             user.complianceStatus = 'ghost_account';
+        } else {
+            // RH not provided, focus on JC vs Warp
+            if (user.inJumpCloud && !user.inWarp) {
+                user.complianceStatus = 'missing_warp';
+            } else if (!user.inJumpCloud && user.inWarp) {
+                user.complianceStatus = 'missing_jumpcloud';
+            } else {
+                user.complianceStatus = 'compliant';
+            }
         }
     });
 
