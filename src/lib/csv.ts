@@ -59,6 +59,27 @@ const CSV_CONFIG: Record<string, { hostname: string[]; ip: string[]; os: string[
         os: ['operating system', 'os', 'sistema operacional'],
         lastSeen: ['last access', 'último acesso']
     },
+    hacker_ranger: {
+        hostname: ['email', 'username'],
+        ip: [],
+        os: [],
+        lastSeen: [],
+        other: {
+            name: ['nome', 'name', 'fullname'],
+            status: ['status', 'situação', 'situacao']
+        }
+    },
+    base_rh: {
+        hostname: ['email', 'username'],
+        ip: [],
+        os: [],
+        lastSeen: [],
+        other: {
+            name: ['nome', 'name', 'fullname'],
+            status: ['status', 'situação', 'situacao', 'estado'],
+            department: ['departamento', 'setor', 'department', 'área', 'area']
+        }
+    },
     generic: {
         hostname: UNIVERSAL_HOSTNAME,
         ip: UNIVERSAL_IP,
@@ -428,4 +449,66 @@ export function parseWarpUsersCsv(content: string): ParsedCsvResult {
     }
 
     return { data, count: data.length, detectedType: 'warp' };
+}
+
+/**
+ * Parse a Hacker Rangers Users CSV export.
+ */
+export function parseHackerRangersCsv(content: string): ParsedCsvResult {
+    const parsed = parseGenericCsv(content);
+    if (!parsed) return { data: [], count: 0, error: 'Arquivo CSV vazio ou inválido.' };
+
+    const { headers, rows } = parsed;
+
+    const emailCol = headers.find(h => ['email', 'e-mail', 'e_mail', 'usuário', 'usuario'].includes(h));
+    if (!emailCol) {
+        return { data: [], count: 0, error: 'CSV do Hacker Rangers deve ter coluna "Email".' };
+    }
+
+    const nameCol = headers.find(h => ['nome', 'name', 'fullname', 'nome completo'].includes(h));
+    const statusCol = headers.find(h => ['status', 'situação', 'situacao'].includes(h));
+
+    const data = rows
+        .map(row => ({
+            email: row[emailCol] || '',
+            name: nameCol ? row[nameCol] : '',
+            status: statusCol ? row[statusCol] : 'Ativo',
+            source: 'hacker_ranger',
+            origin: 'csv',
+        }))
+        .filter(u => u.email);
+
+    return { data, count: data.length, detectedType: 'hacker_ranger' };
+}
+
+/**
+ * Parse a BASE RH Users CSV export.
+ */
+export function parseBaseRhCsv(content: string): ParsedCsvResult {
+    const parsed = parseGenericCsv(content);
+    if (!parsed) return { data: [], count: 0, error: 'Arquivo CSV vazio ou inválido.' };
+
+    const { headers, rows } = parsed;
+
+    const emailCol = headers.find(h => ['email', 'e-mail', 'e_mail', 'usuário', 'usuario'].includes(h));
+    if (!emailCol) {
+        return { data: [], count: 0, error: 'CSV do BASE RH deve ter coluna "Email".' };
+    }
+
+    const nameCol = headers.find(h => ['nome', 'name', 'fullname', 'nome completo'].includes(h));
+    const statusCol = headers.find(h => ['status', 'situação', 'situacao', 'estado'].includes(h));
+    const departmentCol = headers.find(h => ['departamento', 'setor', 'department', 'área', 'area'].includes(h));
+
+    const data = rows
+        .map(row => ({
+            email: row[emailCol] || '',
+            name: nameCol ? row[nameCol] : '',
+            status: statusCol ? row[statusCol] : 'Ativo',
+            department: departmentCol ? row[departmentCol] : '',
+            source: 'base_rh',
+            origin: 'csv',
+        }))
+        .filter(u => u.email);
+
+    return { data, count: data.length, detectedType: 'base_rh' };
 }

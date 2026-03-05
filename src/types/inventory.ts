@@ -175,19 +175,39 @@ export interface WarpUser {
   activeDeviceCount: number;
 }
 
+export interface HackerRangerUser {
+  email: string;
+  name: string;
+  status: string;
+}
+
+export interface BaseRhUser {
+  email: string;
+  name: string;
+  status: string; // 'Ativo', 'Inativo', etc.
+  department?: string;
+}
+
 export type UserComplianceStatus =
   | 'compliant'
   | 'missing_warp'
   | 'missing_jumpcloud'
-  | 'terminated_active';
+  | 'missing_hacker_ranger'
+  | 'missing_base_rh'
+  | 'terminated_active'
+  | 'ghost_account';
 
 export interface UserComparison {
   email: string;
   name: string;
   inJumpCloud: boolean;
   inWarp: boolean;
+  inHackerRanger: boolean;
+  inBaseRh: boolean;
   jumpCloudStatus?: 'active' | 'suspended' | 'terminated';
   warpDeviceCount?: number;
+  hackerRangerStatus?: string;
+  baseRhStatus?: string;
   isTerminated: boolean;
   complianceStatus: UserComplianceStatus;
 }

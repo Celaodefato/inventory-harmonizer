@@ -21,6 +21,8 @@ const defaultCsvData = {
   pam: null,
   jumpcloud: null,
   jumpcloud_users: null,
+  hacker_ranger: null,
+  base_rh: null,
 };
 
 // API Config
@@ -336,6 +338,8 @@ export interface CsvData {
   pam: any[] | null;
   jumpcloud: any[] | null;
   jumpcloud_users: any[] | null;
+  hacker_ranger: any[] | null;
+  base_rh: any[] | null;
 }
 
 export interface CsvMetadata {
@@ -392,7 +396,7 @@ export async function getCsvMetadata(): Promise<Record<string, CsvMetadata | nul
     if (error) throw error;
 
     const result: Record<string, CsvMetadata | null> = {
-      vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null, jumpcloud_users: null
+      vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null, jumpcloud_users: null, hacker_ranger: null, base_rh: null
     };
 
     data?.forEach((item: any) => {

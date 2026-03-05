@@ -75,7 +75,6 @@ export default function UsersPage() {
             console.log('[Debug] JumpCloud Users Raw:', csvData.jumpcloud_users?.length);
             console.log('[Debug] Warp Users Raw:', csvData.warp?.length);
 
-            // Parse JumpCloud users from CSV
             const jumpCloudUsers: JumpCloudUser[] = (csvData.jumpcloud_users || []).map((row: any) => ({
                 email: row.email || row.Email || row.username || '',
                 firstname: row.firstname || row['first name'] || '',
@@ -83,7 +82,6 @@ export default function UsersPage() {
                 state: row.state || 'ACTIVATED'
             })).filter(u => u.email);
 
-            // Parse Warp users from CSV (saved under 'warp' key)
             const warpUsers: WarpUser[] = (csvData.warp || []).map((row: any) => ({
                 email: row.email || row.Email || row.userEmail || '',
                 activeDeviceCount: typeof row.activeDeviceCount === 'number'
@@ -91,11 +89,14 @@ export default function UsersPage() {
                     : parseInt(row.activeDeviceCount || row['active device count'] || '0', 10)
             })).filter((u: WarpUser) => u.email);
 
-            console.log('[Debug] JumpCloud Users Processed:', jumpCloudUsers.length);
-            console.log('[Debug] Warp Users Processed:', warpUsers.length);
-
-            const comparedUsers = compareUsers(jumpCloudUsers, warpUsers, terminatedEmployees);
-            console.log('[Debug] Usuários comparados:', comparedUsers.length);
+            // Pass empty arrays for the new sources as this page doesn't manage them
+            const comparedUsers = compareUsers(
+                jumpCloudUsers,
+                warpUsers,
+                [],
+                [],
+                terminatedEmployees
+            );
             setUsers(comparedUsers);
         } catch (error) {
             console.error('Error loading users:', error);
@@ -170,8 +171,8 @@ export default function UsersPage() {
             }
 
             try {
-                await saveCsvData(tool === 'warp' ? 'warp' : 'jumpcloud_users', result.data, {
-                    tool: tool === 'warp' ? 'warp' : 'jumpcloud_users',
+                await saveCsvData(tool, result.data, {
+                    tool: tool,
                     filename: file.name,
                     timestamp: new Date().toISOString(),
                     count: result.count
@@ -231,11 +232,25 @@ export default function UsersPage() {
                         Faltando JumpCloud
                     </Badge>
                 );
+            case 'missing_hacker_ranger':
+                return (
+                    <Badge variant="outline" className="border-orange-500 text-orange-500">
+                        <AlertCircle className="mr-1 h-3 w-3" />
+                        Faltando Hacker Rangers
+                    </Badge>
+                );
             case 'terminated_active':
                 return (
                     <Badge variant="destructive">
                         <XCircle className="mr-1 h-3 w-3" />
                         Desligado Ativo
+                    </Badge>
+                );
+            case 'ghost_account':
+                return (
+                    <Badge variant="destructive" className="bg-red-500/10 text-red-500 border-red-500/20">
+                        <XCircle className="mr-1 h-3 w-3" />
+                        Conta Zumbi (Fora do RH)
                     </Badge>
                 );
         }
@@ -339,8 +354,7 @@ export default function UsersPage() {
                                                         <FileText className="h-5 w-5" />
                                                     </div>
                                                     <div className="text-left">
-                                                        <p className="text-xs font-bold uppercase">Clique para selecionar</p>
-                                                        <p className="text-[10px] text-muted-foreground">CSV exportado do Warp</p>
+                                                        <p className="text-xs font-bold uppercase truncate">Warp CSV</p>
                                                     </div>
                                                 </div>
                                             </Button>
@@ -360,39 +374,38 @@ export default function UsersPage() {
                     </div>
                 </div>
 
-                {/* Stats Cards */}
                 <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardDescription>Total de Usuários</CardDescription>
-                            <CardTitle className="text-3xl">{stats.total}</CardTitle>
+                        <CardHeader className="pb-3 px-4">
+                            <CardDescription>Total Usuários</CardDescription>
+                            <CardTitle className="text-2xl">{stats.total}</CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-3 px-4">
                             <CardDescription className="flex items-center gap-1">
-                                <CheckCircle2 className="h-4 w-4 text-success" />
+                                <CheckCircle2 className="h-3 w-3 text-success" />
                                 Compliant
                             </CardDescription>
-                            <CardTitle className="text-3xl text-success">{stats.compliant}</CardTitle>
+                            <CardTitle className="text-2xl text-success">{stats.compliant}</CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-3">
+                        <CardHeader className="pb-3 px-4">
                             <CardDescription className="flex items-center gap-1">
-                                <AlertCircle className="h-4 w-4 text-warning" />
+                                <AlertCircle className="h-3 w-3 text-warning" />
                                 Faltando Warp
                             </CardDescription>
-                            <CardTitle className="text-3xl text-warning">{stats.missingWarp}</CardTitle>
+                            <CardTitle className="text-2xl text-warning">{stats.missingWarp}</CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
-                        <CardHeader className="pb-3">
-                            <CardDescription className="flex items-center gap-1">
-                                <XCircle className="h-4 w-4 text-destructive" />
-                                Desligados Ativos
+                        <CardHeader className="pb-3 px-4">
+                            <CardDescription className="flex items-center gap-1 text-destructive">
+                                <XCircle className="h-3 w-3" />
+                                Deslig. Ativo
                             </CardDescription>
-                            <CardTitle className="text-3xl text-destructive">{stats.terminatedActive}</CardTitle>
+                            <CardTitle className="text-2xl text-destructive">{stats.terminatedActive}</CardTitle>
                         </CardHeader>
                     </Card>
                 </div>
@@ -445,7 +458,6 @@ export default function UsersPage() {
                                         <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Email</th>
                                         <th className="px-4 py-3 text-center text-sm font-medium text-foreground">JumpCloud</th>
                                         <th className="px-4 py-3 text-center text-sm font-medium text-foreground">Warp</th>
-                                        <th className="px-4 py-3 text-center text-sm font-medium text-foreground">Dispositivos</th>
                                         <th className="px-4 py-3 text-left text-sm font-medium text-foreground">Status</th>
                                     </tr>
                                 </thead>
@@ -480,9 +492,6 @@ export default function UsersPage() {
                                                 ) : (
                                                     <XCircle className="inline h-5 w-5 text-muted-foreground/30" />
                                                 )}
-                                            </td>
-                                            <td className="px-4 py-3 text-center text-sm text-muted-foreground">
-                                                {user.warpDeviceCount || 0}
                                             </td>
                                             <td className="px-4 py-3">
                                                 {getStatusBadge(user.complianceStatus)}
