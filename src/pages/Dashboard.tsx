@@ -14,6 +14,8 @@ import {
   fetchWarpEndpoints,
   fetchPamEndpoints,
   fetchJumpcloudEndpoints,
+  fetchGcpEndpoints,
+  fetchHuaweiEndpoints,
   compareInventories,
   generateAlerts,
 } from '@/lib/inventory';
@@ -55,6 +57,8 @@ export default function Dashboard() {
     warp: 0,
     pam: 0,
     jumpcloud: 0,
+    gcp: 0,
+    huawei: 0,
   });
 
   const { toast } = useToast();
@@ -133,12 +137,14 @@ export default function Dashboard() {
       const apiConfig = await getApiConfig();
       const terminatedEmployees = await getTerminatedEmployees();
 
-      const [vicariusData, cortexData, warpData, pamData, jumpcloudData] = await Promise.all([
+      const [vicariusData, cortexData, warpData, pamData, jumpcloudData, gcpData, huaweiData] = await Promise.all([
         fetchVicariusEndpoints(apiConfig),
         fetchCortexEndpoints(apiConfig),
         fetchWarpEndpoints(apiConfig),
         fetchPamEndpoints(apiConfig),
         fetchJumpcloudEndpoints(apiConfig),
+        fetchGcpEndpoints(apiConfig),
+        fetchHuaweiEndpoints(apiConfig),
       ]);
 
       setEndpointCounts({
@@ -147,6 +153,8 @@ export default function Dashboard() {
         warp: warpData.length,
         pam: pamData.length,
         jumpcloud: jumpcloudData.length,
+        gcp: gcpData.length,
+        huawei: huaweiData.length,
       });
 
       const result = compareInventories(
@@ -155,6 +163,8 @@ export default function Dashboard() {
         warpData,
         pamData,
         jumpcloudData,
+        gcpData,
+        huaweiData,
         terminatedEmployees
       );
       setComparison(result);
@@ -174,6 +184,8 @@ export default function Dashboard() {
             inWarp: ep.sources.includes('warp'),
             inPam: ep.sources.includes('pam'),
             inJumpCloud: ep.sources.includes('jumpcloud'),
+            inGcp: ep.sources.includes('gcp'),
+            inHuawei: ep.sources.includes('huawei'),
             isNonCompliant: result.nonCompliant.some(nc => nc.hostname === ep.hostname),
             isTerminated: result.terminatedWithActiveEndpoints.some(t => t.hostname === ep.hostname)
           }))
@@ -198,6 +210,8 @@ export default function Dashboard() {
           warp: warpData.length,
           pam: pamData.length,
           jumpcloud: jumpcloudData.length,
+          gcp: gcpData.length,
+          huawei: huaweiData.length,
         },
       };
       await addSyncLog(log);

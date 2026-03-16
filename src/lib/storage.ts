@@ -12,6 +12,8 @@ const defaultApiConfig: ApiConfig = {
   warp: { baseUrl: '', apiToken: '' },
   pam: { baseUrl: '', apiToken: '' },
   jumpcloud: { baseUrl: '', apiToken: '' },
+  gcp: { baseUrl: '', apiToken: '' },
+  huawei: { baseUrl: '', apiToken: '' },
 };
 
 const defaultCsvData = {
@@ -23,6 +25,8 @@ const defaultCsvData = {
   jumpcloud_users: null,
   hacker_ranger: null,
   base_rh: null,
+  gcp: null,
+  huawei: null,
 };
 
 // API Config
@@ -32,7 +36,7 @@ export async function getApiConfig(): Promise<ApiConfig> {
     if (error) throw error;
 
     const config = { ...defaultApiConfig };
-    data?.forEach((item: any) => {
+    (data as { tool_name: string; base_url: string; api_key: string }[] | null)?.forEach((item) => {
       if (item.tool_name && config[item.tool_name as keyof ApiConfig]) {
         (config as any)[item.tool_name] = {
           baseUrl: item.base_url || '',
@@ -75,14 +79,33 @@ export async function getSyncLogs(): Promise<SyncLog[]> {
 
     if (error) throw error;
 
-    return data.map((item: any) => ({
-      ...item,
+    return (data as {
+      id: string;
+      timestamp: string;
+      status: string;
+      message: string;
+      details?: string;
+      vicarius_count: number;
+      cortex_count: number;
+      warp_count: number;
+      pam_count: number;
+      jumpcloud_count: number;
+      gcp_count: number;
+      huawei_count: number;
+    }[]).map((item) => ({
+      id: item.id,
+      timestamp: item.timestamp,
+      status: item.status as 'success' | 'error' | 'partial',
+      message: item.message,
+      details: item.details,
       endpointCounts: {
         vicarius: item.vicarius_count,
         cortex: item.cortex_count,
         warp: item.warp_count,
         pam: item.pam_count,
         jumpcloud: item.jumpcloud_count,
+        gcp: item.gcp_count,
+        huawei: item.huawei_count,
       }
     }));
   } catch (error) {
@@ -103,6 +126,8 @@ export async function addSyncLog(log: SyncLog): Promise<void> {
       warp_count: log.endpointCounts?.warp || 0,
       pam_count: log.endpointCounts?.pam || 0,
       jumpcloud_count: log.endpointCounts?.jumpcloud || 0,
+      gcp_count: log.endpointCounts?.gcp || 0,
+      huawei_count: log.endpointCounts?.huawei || 0,
     };
 
     const { error } = await supabase.from('sync_logs').insert(dbLog);
@@ -198,14 +223,31 @@ export async function getTerminatedEmployees(): Promise<TerminatedEmployee[]> {
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    return data.map((item: any) => ({
+    return (data as {
+      id: string;
+      name: string;
+      email: string;
+      termination_date: string;
+      notes?: string;
+      created_at: string;
+      ad_disabled?: boolean;
+      google_password_changed?: boolean;
+      auto_reply_set?: boolean;
+      takeout_completed?: boolean;
+      machine_backup?: boolean;
+      license_removal_requested?: boolean;
+      license_removed?: boolean;
+      moved_to_terminated_ou?: boolean;
+      machine_collected?: boolean;
+      glpi_updated?: boolean;
+      responsible?: string;
+    }[]).map((item) => ({
       id: item.id,
       name: item.name,
       email: item.email,
       terminationDate: item.termination_date,
       notes: item.notes,
       createdAt: item.created_at,
-      // Checklist fields
       adDisabled: item.ad_disabled,
       googlePasswordChanged: item.google_password_changed,
       autoReplySet: item.auto_reply_set,
@@ -290,7 +332,15 @@ export async function getOffboardingAlerts(): Promise<OffboardingAlert[]> {
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    return data.map((item: any) => ({
+    return (data as {
+      id: string;
+      employee_id: string;
+      employee_name: string;
+      employee_email: string;
+      created_at: string;
+      status: 'pending' | 'in_progress' | 'completed';
+      checklist: any; // Keeping any for complex JSON for now, or define if possible
+    }[]).map((item) => ({
       id: item.id,
       employeeId: item.employee_id,
       employeeName: item.employee_name,
@@ -340,6 +390,8 @@ export interface CsvData {
   jumpcloud_users: any[] | null;
   hacker_ranger: any[] | null;
   base_rh: any[] | null;
+  gcp: any[] | null;
+  huawei: any[] | null;
 }
 
 export interface CsvMetadata {
@@ -355,8 +407,8 @@ export async function getCsvData(): Promise<CsvData> {
     if (error) throw error;
 
     const result = { ...defaultCsvData };
-    console.log('[Debug] Registros lidos do Supabase:', data?.length);
-    data?.forEach((item: any) => {
+    console.log('[Debug] Registros lidos do Supabase:', (data as any[])?.length);
+    (data as { tool_name: string; raw_data: any[] }[] | null)?.forEach((item) => {
       console.log('[Debug] Ferramenta encontrada no DB:', item.tool_name);
       if (item.tool_name && item.tool_name in result) {
         (result as any)[item.tool_name] = item.raw_data || [];
@@ -396,10 +448,10 @@ export async function getCsvMetadata(): Promise<Record<string, CsvMetadata | nul
     if (error) throw error;
 
     const result: Record<string, CsvMetadata | null> = {
-      vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null, jumpcloud_users: null, hacker_ranger: null, base_rh: null
+      vicarius: null, cortex: null, warp: null, pam: null, jumpcloud: null, jumpcloud_users: null, hacker_ranger: null, base_rh: null, gcp: null, huawei: null
     };
 
-    data?.forEach((item: any) => {
+    (data as { tool_name: string; filename: string; record_count: number; updated_at: string }[] | null)?.forEach((item) => {
       // Only treat as valid metadata if there is a filename and data
       if (item.tool_name && item.tool_name in result && item.filename) {
         result[item.tool_name] = {

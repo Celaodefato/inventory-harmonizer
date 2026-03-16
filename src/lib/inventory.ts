@@ -250,6 +250,26 @@ export async function fetchPamEndpoints(config: ApiConfig): Promise<Endpoint[]> 
   }
 }
 
+export async function fetchGcpEndpoints(config: ApiConfig): Promise<Endpoint[]> {
+  const configured = isApiConfigured(config, 'gcp');
+  if (!configured) {
+    const csvData = (await getCsvData()).gcp;
+    if (csvData && csvData.length > 0) return csvData;
+    return [];
+  }
+  return []; // API implementation placeholder
+}
+
+export async function fetchHuaweiEndpoints(config: ApiConfig): Promise<Endpoint[]> {
+  const configured = isApiConfigured(config, 'huawei');
+  if (!configured) {
+    const csvData = (await getCsvData()).huawei;
+    if (csvData && csvData.length > 0) return csvData;
+    return [];
+  }
+  return []; // API implementation placeholder
+}
+
 export async function fetchJumpcloudEndpoints(config: ApiConfig): Promise<Endpoint[]> {
   const configured = isApiConfigured(config, 'jumpcloud');
   if (!configured) {
@@ -292,12 +312,14 @@ export function compareInventories(
   warp: Endpoint[],
   pam: Endpoint[],
   jumpcloud: Endpoint[],
+  gcp: Endpoint[] = [],
+  huawei: Endpoint[] = [],
   terminatedEmployees: TerminatedEmployee[] = []
 ): ComparisonResult {
   const map = new Map<string, NormalizedEndpoint>();
 
   // 1. Normalize and Merge
-  const processEndpoints = (endpoints: Endpoint[], source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud') => {
+  const processEndpoints = (endpoints: Endpoint[], source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud' | 'gcp' | 'huawei') => {
     endpoints.forEach(ep => {
       if (!ep.hostname || ep.hostname.trim() === '') return; // Skip invalid devices
 
@@ -339,6 +361,8 @@ export function compareInventories(
   processEndpoints(warp, 'warp');
   processEndpoints(pam, 'pam');
   processEndpoints(jumpcloud, 'jumpcloud');
+  processEndpoints(gcp, 'gcp');
+  processEndpoints(huawei, 'huawei');
 
   const allEndpoints = Array.from(map.values());
 
@@ -460,6 +484,10 @@ export function compareInventories(
     missingFromWarp: allEndpoints.filter(e => !isServer(e.hostname) && !e.sources.includes('warp')), // Workstations need Warp
     missingFromPam: allEndpoints.filter(e => !e.sources.includes('pam') && isServer(e.hostname)),
     missingFromJumpcloud: allEndpoints.filter(e => !e.sources.includes('jumpcloud')),
+    missingFromGcp: allEndpoints.filter(e => !e.sources.includes('gcp')),
+    missingFromHuawei: allEndpoints.filter(e => !e.sources.includes('huawei')),
+    onlyGcp: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('gcp')),
+    onlyHuawei: allEndpoints.filter(e => e.sources.length === 1 && e.sources.includes('huawei')),
     terminatedWithActiveEndpoints,
     terminatedInJumpcloud,
     terminatedInPam,

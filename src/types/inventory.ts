@@ -5,7 +5,7 @@ export interface Endpoint {
   uuid: string;
   os?: string;
   lastSeen?: string;
-  source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud';
+  source: 'vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud' | 'gcp' | 'huawei';
   origin: 'api' | 'csv' | 'mock';
   userId?: string;
   userEmail?: string;
@@ -19,7 +19,7 @@ export interface NormalizedEndpoint {
   uuid: string;
   os?: string;
   lastSeen?: string;
-  sources: ('vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud')[];
+  sources: ('vicarius' | 'cortex' | 'warp' | 'pam' | 'jumpcloud' | 'gcp' | 'huawei')[];
   sourceOrigins: Record<string, 'api' | 'csv' | 'mock'>;
   userId?: string;
   userEmail?: string;
@@ -52,6 +52,10 @@ export interface ComparisonResult {
   namingViolations: NormalizedEndpoint[];
   workstations: NormalizedEndpoint[];
   servers: NormalizedEndpoint[];
+  onlyGcp: NormalizedEndpoint[];
+  onlyHuawei: NormalizedEndpoint[];
+  missingFromGcp: NormalizedEndpoint[];
+  missingFromHuawei: NormalizedEndpoint[];
 }
 
 export interface ApiConfig {
@@ -75,6 +79,14 @@ export interface ApiConfig {
     baseUrl: string;
     apiToken: string;
   };
+  gcp: {
+    baseUrl: string;
+    apiToken: string;
+  };
+  huawei: {
+    baseUrl: string;
+    apiToken: string;
+  };
 }
 
 export interface SyncLog {
@@ -89,6 +101,8 @@ export interface SyncLog {
     warp: number;
     pam: number;
     jumpcloud: number;
+    gcp: number;
+    huawei: number;
   };
 }
 

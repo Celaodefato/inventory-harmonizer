@@ -15,6 +15,8 @@ export default function ApiConfigPage() {
     warp: { baseUrl: '', apiToken: '' },
     pam: { baseUrl: '', apiToken: '' },
     jumpcloud: { baseUrl: '', apiToken: '' },
+    gcp: { baseUrl: '', apiToken: '' },
+    huawei: { baseUrl: '', apiToken: '' },
   });
 
   const [csvMetadata, setCsvMetadata] = useState<Record<string, CsvMetadata | null>>({
@@ -23,6 +25,8 @@ export default function ApiConfigPage() {
     warp: null,
     pam: null,
     jumpcloud: null,
+    gcp: null,
+    huawei: null,
   });
 
   const refreshMetadata = async () => {
@@ -73,6 +77,8 @@ export default function ApiConfigPage() {
   const isWarpConfigured = !!(config.warp.baseUrl && config.warp.apiToken);
   const isPamConfigured = !!(config.pam.baseUrl && config.pam.apiToken);
   const isJumpcloudConfigured = !!(config.jumpcloud.baseUrl && config.jumpcloud.apiToken);
+  const isGcpConfigured = !!(config.gcp.baseUrl && config.gcp.apiToken);
+  const isHuaweiConfigured = !!(config.huawei.baseUrl && config.huawei.apiToken);
 
   return (
     <MainLayout>
@@ -81,7 +87,7 @@ export default function ApiConfigPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">Configurar APIs</h1>
           <p className="text-muted-foreground text-lg">
-            Configure as credenciais para conectar às 5 ferramentas de segurança
+            Configure as credenciais para conectar às 7 ferramentas de segurança
           </p>
         </div>
 
@@ -156,6 +162,30 @@ export default function ApiConfigPage() {
               keyPlaceholder="jc_xxxxx..."
               isConfigured={isJumpcloudConfigured}
             />
+
+            <IndividualToolCard
+              title="Google Cloud (GCP)"
+              description="Infraestrutura e Compute Engine"
+              color="bg-blue-600"
+              icon={<Server className="h-6 w-6 text-white" />}
+              config={config.gcp}
+              onSave={createSaveHandler('gcp', 'apiToken')}
+              keyLabel="API Key / Token"
+              keyPlaceholder="gcp_xxxxx..."
+              isConfigured={isGcpConfigured}
+            />
+
+            <IndividualToolCard
+              title="Huawei Cloud"
+              description="Infraestrutura de Nuvem Huawei"
+              color="bg-red-600"
+              icon={<Server className="h-6 w-6 text-white" />}
+              config={config.huawei}
+              onSave={createSaveHandler('huawei', 'apiToken')}
+              keyLabel="Access Key / Token"
+              keyPlaceholder="hw_xxxxx..."
+              isConfigured={isHuaweiConfigured}
+            />
           </div>
         </div>
 
@@ -223,6 +253,22 @@ export default function ApiConfigPage() {
               color="bg-blue-400"
               icon={<Users className="h-5 w-5 text-white" />}
               metadata={csvMetadata.jumpcloud_users}
+              onUpdate={refreshMetadata}
+            />
+            <CsvUploadCard
+              tool="gcp"
+              title="Google Cloud (GCP)"
+              color="bg-blue-600"
+              icon={<Server className="h-5 w-5 text-white" />}
+              metadata={csvMetadata.gcp}
+              onUpdate={refreshMetadata}
+            />
+            <CsvUploadCard
+              tool="huawei"
+              title="Huawei Cloud"
+              color="bg-red-600"
+              icon={<Server className="h-5 w-5 text-white" />}
+              metadata={csvMetadata.huawei}
               onUpdate={refreshMetadata}
             />
           </div>
