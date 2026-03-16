@@ -11,7 +11,7 @@ import { getApiConfig, getTerminatedEmployees, getCsvData } from './storage';
 // Helper to check config sync-style (offline/mock check)
 function isApiConfigured(config: ApiConfig, tool: keyof ApiConfig): boolean {
   if (tool === 'vicarius') return !!(config.vicarius.baseUrl && config.vicarius.apiKey);
-  const toolConfig = config[tool] as { baseUrl: string; apiToken?: string };
+  const toolConfig = config[tool] as { baseUrl: string; apiToken: string };
   return !!(toolConfig?.baseUrl && toolConfig?.apiToken);
 }
 
@@ -112,8 +112,21 @@ export async function fetchVicariusEndpoints(config: ApiConfig): Promise<Endpoin
     if (!response.ok) throw new Error(`Vicarius API error: ${response.status}`);
 
     const data = await response.json();
-    return data.map((item: any) => ({
-      id: item.id || item.uuid,
+    return data.map((item: {
+      id?: string;
+      uuid?: string;
+      hostname?: string;
+      name?: string;
+      ip?: string;
+      ipAddress?: string;
+      os?: string;
+      operatingSystem?: string;
+      lastSeen?: string;
+      lastSeenAt?: string;
+      userEmail?: string;
+      user_email?: string;
+    }) => ({
+      id: item.id || item.uuid || '',
       hostname: item.hostname || item.name || '',
       ip: item.ip || item.ipAddress || '',
       uuid: item.uuid || item.id || '',
@@ -334,7 +347,7 @@ export function compareInventories(
   const namingViolations: NormalizedEndpoint[] = [];
   const workstations: NormalizedEndpoint[] = [];
   const servers: NormalizedEndpoint[] = [];
-  const userViolations: any[] = [];
+  const userViolations: NormalizedEndpoint[] = [];
 
   // Helper: Is Valid Workstation Hostname
   // Aceita qualquer hostname que comece com EXA-ARK, EXA-MAC, ou MACBOOKPRO

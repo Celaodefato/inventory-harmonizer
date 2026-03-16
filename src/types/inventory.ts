@@ -48,7 +48,7 @@ export interface ComparisonResult {
   terminatedInJumpcloud: TerminatedEmployee[];
   terminatedInPam: TerminatedEmployee[];
   nonCompliant: NormalizedEndpoint[];
-  userViolations: any[];
+  userViolations: NormalizedEndpoint[];
   namingViolations: NormalizedEndpoint[];
   workstations: NormalizedEndpoint[];
   servers: NormalizedEndpoint[];
